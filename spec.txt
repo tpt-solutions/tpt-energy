@@ -1,0 +1,1153 @@
+# TPT Energy: Open Source Design Document
+
+**Organization:** TPT Solutions (`tpt-solutions`)
+**Repository:** `tpt-energy`
+**Crate Prefix:** `tpt-nrg-*`
+**License:** `MIT OR Apache-2.0`
+**Status:** Open Source Master Plan
+**Philosophy:** 100% Open Source. The Universal Energy System Integrator. No Vendor Lock-in. No GPL Traps.
+
+---
+
+## 1. Open Source Declaration
+
+`tpt-energy` is a fully open-source, MIT-licensed computational engine for **macro-scale energy systems, power grids, and renewable integration**. Every crate, every optimization algorithm, and every power flow solver is freely available under MIT OR Apache-2.0.
+
+### Why Fully Open Source for Energy?
+
+The global transition to renewable energy is being bottlenecked by legacy, proprietary grid software.
+
+1.  **The Monopoly Problem:** Power system analysis is dominated by closed-source, exorbitantly expensive tools (PSS/E, DIgSILENT PowerFactory, ETAP, HOMER Pro). Startups, researchers, and developing nations are priced out of grid innovation.
+2.  **The Scripting Trap:** Open-source alternatives (MATPOWER, pandapower) are often bound to MATLAB or Python, making them too slow for real-time edge deployment and impossible to compile into standalone, browser-based WebAssembly tools.
+3.  **The Device-Grid Disconnect:** Legacy tools treat the grid as a black box. They don't natively integrate with the physics of the devices connected to it (battery chemistry, wind turbine aeroelasticity, solar thermal degradation).
+
+`tpt-energy` solves this by acting as the **Universal System Integrator**. It provides blazing-fast, memory-safe, pure-Rust power flow solvers, dispatch optimizers, and economic models. Because it compiles to WebAssembly, it can run real-time microgrid control logic on edge devices or interactive grid planning tools directly in the browser.
+
+### Open Source Governance
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                    TPT ENERGY GOVERNANCE                     │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  License:        MIT OR Apache-2.0 (dual)                   │
+│  Contributions:  MIT OR Apache-2.0 (CLA-free via DCO)       │
+│  Trademark:      "TPT Energy" name reserved by TPT          │
+│  Governance:     Benevolent Dictator + RFC process          │
+│  Roadmap:        Public GitHub Projects board               │
+│  Releases:       SemVer, 6-week cadence                     │
+│  Security:       SECURITY.md, private disclosure            │
+│  Standards:      IEEE, IEC 61850, OpenFMB, CIM              │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 2. Executive Vision: The System Integrator
+
+`tpt-energy` does **not** simulate device-level physics. It consumes the outputs of your other TPT repositories to simulate the **macro-scale behavior, optimization, and economics** of energy systems.
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                     THE ENERGY CYCLE                         │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐     │
+│  │ tpt-materials│  │tpt-transport │  │tpt-electronics│     │
+│  │ Battery Chem │  │ Wind Turbine │  │ PV Inverters │     │
+│  │ Degradation  │  │ Aeroelastic  │  │ Thermal Mgmt │     │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘     │
+│         │                 │                 │             │
+│         └─────────────────┼─────────────────┘             │
+│                           ▼                               │
+│                  ┌──────────────────┐                     │
+│                  │   tpt-energy     │                     │
+│                  │ (System Integrator)│                    │
+│                  └──────────────────┘                     │
+│                           │                               │
+│         ┌─────────────────┼─────────────────┐             │
+│         ▼                 ▼                 ▼             │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐     │
+│  │ Power Flow   │  │ Dispatch Opt │  │ Grid Economics│     │
+│  │ & Stability  │  │ & Microgrids │  │ & LCOE        │     │
+│  └──────────────┘  └──────────────┘  └──────────────┘     │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Why Rust for Energy Systems?
+
+| Requirement | Rust Advantage |
+|---|---|
+| Real-time Grid Control | Microsecond latency for edge microgrid controllers |
+| Massive Sparse Matrices | `tpt-math` sparse solvers for 100,000+ bus power flow |
+| Browser-based Planning | WASM compilation for interactive utility dashboards |
+| Enterprise Deployment | MIT-only chain, no GPL audit risk for utilities |
+| Memory Safety | No segfaults in critical infrastructure control loops |
+| Concurrency | Fearless concurrency for parallel scenario analysis |
+
+---
+
+## 3. Substrate Integration Map
+
+```text
+tpt-math
+├── tpt-math-linalg-fixed     → Sparse Jacobian matrices for Newton-Raphson
+├── tpt-math-optimize-general → MILP for Unit Commitment, LP for Economic Dispatch
+├── tpt-math-prob-dist        → Weibull wind distributions, probabilistic forecasting
+└── tpt-math-signal-filter    → Kalman filtering for State of Charge (SoC) estimation
+
+tpt-engineering
+├── Thermodynamics            → Heat rate curves for thermal power plants
+├── Fluid dynamics            → Hydroelectric head/flow calculations
+└── Material properties       → Conductor resistance vs temperature (ampacity)
+
+tpt-science
+├── Meteorology               → Solar irradiance models, wind speed profiles
+├── Astronomy                 → Solar Position Algorithm (SPA)
+└── Chemistry                 → Electrolyzer efficiency curves (Hydrogen)
+
+tpt-fem
+└── (Not directly used for grid physics, but imports thermal limits from device repos)
+
+Cross-Repo Imports (The Energy Cycle):
+├── tpt-materials             → Battery degradation curves (SoH)
+├── tpt-transport             → Wind turbine power curves, wake models
+└── tpt-electronics           → Inverter clipping limits, PV thermal derating
+```
+
+---
+
+## 4. Workspace Layout
+
+```text
+tpt-energy/
+├── Cargo.toml
+├── LICENSE-MIT
+├── LICENSE-APACHE
+├── README.md
+├── CONTRIBUTING.md
+├── SECURITY.md
+├── CODE_OF_CONDUCT.md
+├── CHANGELOG.md
+├── deny.toml
+├── rustfmt.toml
+├── clippy.toml
+├── .github/
+│   ├── workflows/
+│   │   ├── ci.yml
+│   │   ├── license.yml
+│   │   ├── benchmark.yml
+│   │   ├── docs.yml
+│   │   └── release.yml
+│   ├── ISSUE_TEMPLATE/
+│   └── PULL_REQUEST_TEMPLATE.md
+├── crates/
+│   ├── core/
+│   │   ├── tpt-nrg-core/
+│   │   ├── tpt-nrg-topology/
+│   │   ├── tpt-nrg-timeseries/
+│   │   └── tpt-nrg-wasm/
+│   ├── resource/
+│   │   ├── tpt-nrg-solar/
+│   │   ├── tpt-nrg-wind/
+│   │   ├── tpt-nrg-hydro/
+│   │   └── tpt-nrg-load/
+│   ├── grid/
+│   │   ├── tpt-nrg-powerflow/
+│   │   ├── tpt-nrg-fault/
+│   │   ├── tpt-nrg-state-estimation/
+│   │   └── tpt-nrg-protection/
+│   ├── storage/
+│   │   ├── tpt-nrg-battery/
+│   │   ├── tpt-nrg-hydrogen/
+│   │   └── tpt-nrg-thermal-storage/
+│   ├── microgrid/
+│   │   ├── tpt-nrg-der/
+│   │   ├── tpt-nrg-islanding/
+│   │   └── tpt-nrg-vpp/
+│   ├── dispatch/
+│   │   ├── tpt-nrg-unit-commitment/
+│   │   ├── tpt-nrg-economic-dispatch/
+│   │   └── tpt-nrg-reserve/
+│   └── economics/
+│       ├── tpt-nrg-lcoe/
+│       ├── tpt-nrg-market/
+│       └── tpt-nrg-carbon/
+├── examples/
+│   ├── ieee-14-bus-powerflow/
+│   ├── solar-farm-layout/
+│   ├── wind-farm-wake/
+│   ├── microgrid-islanding/
+│   └── battery-arbitrage/
+├── test-data/
+│   ├── ieee/
+│   ├── nrel/
+│   ├── load-profiles/
+│   └── golden/
+├── benches/
+│   ├── newton-raphson-100k-bus.rs
+│   ├── unit-commitment-milp.rs
+│   └── solar-spa-calculation.rs
+├── docs/
+│   ├── book/
+│   ├── rfc/
+│   └── api/
+└── rfcs/
+    ├── 0001-sparse-powerflow.md
+    ├── 0002-battery-degradation-integration.md
+    └── 0003-microgrid-islanding.md
+```
+
+---
+
+## 5. Crate Taxonomy (Complete)
+
+### Domain 1: Core & Topology
+
+#### `tpt-nrg-core`
+
+Fundamental domain types for energy systems.
+
+```rust
+pub struct EnergySystem {
+    pub id: SystemId,
+    pub name: String,
+    pub buses: Vec<Bus>,
+    pub branches: Vec<Branch>,
+    pub generators: Vec<Generator>,
+    pub loads: Vec<Load>,
+    pub storage: Vec<StorageAsset>,
+    pub base_mva: f64,
+    pub frequency_hz: f64,
+}
+
+pub struct Bus {
+    pub id: BusId,
+    pub name: String,
+    pub bus_type: BusType,
+    pub base_kv: f64,
+    pub voltage_pu: f64,
+    pub angle_rad: f64,
+    pub active_power_mw: f64,
+    pub reactive_power_mvar: f64,
+}
+
+pub enum BusType {
+    Slack,      // Reference bus (V, θ known)
+    PV,         // Generator bus (P, V known)
+    PQ,         // Load bus (P, Q known)
+    Isolated,
+}
+
+pub struct Branch {
+    pub id: BranchId,
+    pub from_bus: BusId,
+    pub to_bus: BusId,
+    pub resistance_pu: f64,
+    pub reactance_pu: f64,
+    pub susceptance_pu: f64,
+    pub tap_ratio: f64,
+    pub phase_shift_rad: f64,
+    pub rating_mva: f64,
+}
+
+pub struct Generator {
+    pub id: GeneratorId,
+    pub bus: BusId,
+    pub gen_type: GeneratorType,
+    pub active_power_mw: f64,
+    pub reactive_power_mvar: f64,
+    pub voltage_setpoint_pu: f64,
+    pub cost_curve: CostCurve,
+}
+
+pub enum GeneratorType {
+    Thermal { fuel: FuelType, heat_rate: HeatRateCurve },
+    Hydro { head_m: f64, flow_rate_m3s: f64 },
+    Wind { power_curve: PowerCurve, wake_model: WakeModel },
+    Solar { capacity_mw: f64, inverter_limit_mw: f64 },
+    Nuclear,
+    Geothermal,
+}
+```
+
+#### `tpt-nrg-topology`
+
+Network graph and connectivity analysis.
+
+```rust
+pub struct NetworkTopology {
+    pub adjacency_matrix: SparseMatrix<bool>,
+    pub bus_map: HashMap<BusId, usize>,
+}
+
+impl NetworkTopology {
+    pub fn find_islands(&self) -> Vec<Vec<BusId>> {
+        // Connected components analysis
+        // Used for microgrid islanding detection
+    }
+    
+    pub fn find_shortest_path(
+        &self,
+        from: BusId,
+        to: BusId,
+    ) -> Option<Vec<BranchId>> {
+        // Dijkstra's algorithm for transmission path analysis
+    }
+    
+    pub fn calculate_admittance_matrix(&self) -> SparseMatrix<Complex<f64>> {
+        // Build Y-bus matrix from branch data
+    }
+}
+```
+
+---
+
+### Domain 2: Resource Modeling
+
+#### `tpt-nrg-solar`
+
+Solar irradiance and PV system modeling.
+
+```rust
+pub struct SolarModel {
+    pub latitude: f64,
+    pub longitude: f64,
+    pub altitude_m: f64,
+    pub timezone: i32,
+}
+
+impl SolarModel {
+    pub fn solar_position(
+        &self,
+        timestamp: DateTime<Utc>,
+    ) -> SolarPosition {
+        // NREL Solar Position Algorithm (SPA)
+        // Calculate zenith, azimuth, air mass
+    }
+    
+    pub fn clear_sky_irradiance(
+        &self,
+        position: &SolarPosition,
+    ) -> Irradiance {
+        // Calculate GHI, DNI, DHI under clear sky conditions
+    }
+    
+    pub fn plane_of_array_irradiance(
+        &self,
+        irradiance: &Irradiance,
+        tilt_deg: f64,
+        azimuth_deg: f64,
+    ) -> Irradiance {
+        // Transpose horizontal irradiance to tilted plane
+    }
+    
+    pub fn pv_output(
+        &self,
+        poa_irradiance: &Irradiance,
+        cell_temp: f64,
+        system: &PvSystem,
+    ) -> f64 {
+        // Calculate DC power output
+        // Apply temperature derating, soiling losses, inverter clipping
+    }
+}
+
+pub struct SolarPosition {
+    pub zenith_deg: f64,
+    pub azimuth_deg: f64,
+    pub air_mass: f64,
+}
+
+pub struct Irradiance {
+    pub ghi: f64,  // Global Horizontal Irradiance (W/m²)
+    pub dni: f64,  // Direct Normal Irradiance (W/m²)
+    pub dhi: f64,  // Diffuse Horizontal Irradiance (W/m²)
+}
+```
+
+#### `tpt-nrg-wind`
+
+Wind farm modeling and wake effects.
+
+```rust
+pub struct WindModel {
+    pub hub_height_m: f64,
+    pub roughness_length: f64,
+}
+
+impl WindModel {
+    pub fn wind_speed_at_height(
+        &self,
+        reference_speed: f64,
+        reference_height: f64,
+    ) -> f64 {
+        // Logarithmic wind profile or power law
+        // v(h) = v_ref * ln(h/z0) / ln(h_ref/z0)
+    }
+    
+    pub fn weibull_probability(
+        &self,
+        wind_speed: f64,
+        k: f64,  // Shape parameter
+        c: f64,  // Scale parameter
+    ) -> f64 {
+        // Weibull distribution PDF
+    }
+}
+
+pub struct WindFarm {
+    pub turbines: Vec<WindTurbine>,
+    pub wake_model: WakeModel,
+}
+
+pub enum WakeModel {
+    JensenPark { wake_decay_constant: f64 },
+    Frandsen,
+    EddyViscosity,
+}
+
+impl WindFarm {
+    pub fn calculate_wake_losses(
+        &self,
+        wind_direction: f64,
+        wind_speed: f64,
+    ) -> Vec<f64> {
+        // Calculate velocity deficit for each turbine
+        // based on upstream turbine positions
+    }
+    
+    pub fn total_power_output(
+        &self,
+        wind_speed: f64,
+        wind_direction: f64,
+    ) -> f64 {
+        // Sum power of all turbines after wake losses
+    }
+}
+```
+
+#### `tpt-nrg-load`
+
+Load forecasting and demand modeling.
+
+```rust
+pub struct LoadModel {
+    pub base_load_mw: f64,
+    pub temperature_sensitivity: f64,
+    pub price_elasticity: f64,
+}
+
+impl LoadModel {
+    pub fn forecast_load(
+        &self,
+        hour_of_day: u32,
+        day_of_week: u32,
+        temperature_c: f64,
+        is_holiday: bool,
+    ) -> f64 {
+        // Calculate load based on time, weather, and calendar
+    }
+    
+    pub fn demand_response(
+        &self,
+        price_signal: f64,
+        elasticity: f64,
+    ) -> f64 {
+        // Calculate load reduction based on price elasticity
+    }
+}
+```
+
+---
+
+### Domain 3: Power Systems & Grid
+
+#### `tpt-nrg-powerflow`
+
+AC/DC power flow solvers.
+
+```rust
+pub struct PowerFlowSolver {
+    pub system: EnergySystem,
+    pub method: PowerFlowMethod,
+    pub max_iterations: u32,
+    pub tolerance: f64,
+}
+
+pub enum PowerFlowMethod {
+    NewtonRaphson,
+    GaussSeidel,
+    FastDecoupled,
+    DcPowerFlow,
+}
+
+impl PowerFlowSolver {
+    pub fn solve(&self) -> Result<PowerFlowResult, PowerFlowError> {
+        match self.method {
+            PowerFlowMethod::NewtonRaphson => self.newton_raphson(),
+            PowerFlowMethod::DcPowerFlow => self.dc_power_flow(),
+            // ... other methods
+        }
+    }
+    
+    fn newton_raphson(&self) -> Result<PowerFlowResult, PowerFlowError> {
+        // 1. Build Y-bus admittance matrix
+        // 2. Initialize voltage vector
+        // 3. Calculate power mismatch (ΔP, ΔQ)
+        // 4. Build Jacobian matrix (sparse)
+        // 5. Solve J * Δx = mismatch
+        // 6. Update voltages and angles
+        // 7. Repeat until mismatch < tolerance
+    }
+}
+
+pub struct PowerFlowResult {
+    pub bus_voltages: Vec<Complex<f64>>,
+    pub branch_flows: Vec<BranchFlow>,
+    pub generation_mw: f64,
+    pub load_mw: f64,
+    pub losses_mw: f64,
+    pub converged: bool,
+    pub iterations: u32,
+}
+
+pub struct BranchFlow {
+    pub branch_id: BranchId,
+    pub from_bus_power: Complex<f64>,
+    pub to_bus_power: Complex<f64>,
+    pub loading_percent: f64,
+}
+```
+
+#### `tpt-nrg-fault`
+
+Short circuit and fault analysis.
+
+```rust
+pub struct FaultAnalyzer {
+    pub system: EnergySystem,
+}
+
+pub enum FaultType {
+    ThreePhase,
+    LineToLine,
+    LineToGround,
+    DoubleLineToGround,
+}
+
+impl FaultAnalyzer {
+    pub fn calculate_fault_current(
+        &self,
+        fault_bus: BusId,
+        fault_type: FaultType,
+        fault_impedance: Complex<f64>,
+    ) -> FaultResult {
+        // Build sequence networks (positive, negative, zero)
+        // Calculate fault current in per-unit and Amps
+    }
+}
+
+pub struct FaultResult {
+    pub fault_current_pu: f64,
+    pub fault_current_ka: f64,
+    pub bus_voltages_during_fault: Vec<f64>,
+    pub sequence_currents: SequenceCurrents,
+}
+```
+
+---
+
+### Domain 4: Energy Storage
+
+#### `tpt-nrg-battery`
+
+Grid-scale Battery Energy Storage Systems (BESS).
+
+```rust
+pub struct BatteryStorage {
+    pub capacity_mwh: f64,
+    pub power_rating_mw: f64,
+    pub state_of_charge: f64,  // 0.0 to 1.0
+    pub round_trip_efficiency: f64,
+    pub degradation_model: Option<DegradationModel>,
+}
+
+pub struct DegradationModel {
+    pub cycle_life: u32,
+    pub calendar_life_years: f64,
+    pub dod_curve: Vec<(f64, u32)>,  // Depth of Discharge vs Cycles
+}
+
+impl BatteryStorage {
+    pub fn charge(
+        &mut self,
+        power_mw: f64,
+        duration_hours: f64,
+    ) -> ChargeResult {
+        // Update SoC considering efficiency and limits
+    }
+    
+    pub fn discharge(
+        &mut self,
+        power_mw: f64,
+        duration_hours: f64,
+    ) -> DischargeResult {
+        // Update SoC, check if hitting minimum SoC
+    }
+    
+    pub fn calculate_degradation(
+        &self,
+        cycles: f64,
+        avg_dod: f64,
+        temperature_c: f64,
+    ) -> f64 {
+        // Calculate capacity fade based on cycles, DoD, and temp
+        // Integrates with tpt-materials degradation curves
+    }
+}
+```
+
+#### `tpt-nrg-hydrogen`
+
+Hydrogen electrolysis and fuel cell modeling.
+
+```rust
+pub struct HydrogenSystem {
+    pub electrolyzer: Electrolyzer,
+    pub storage_tank: HydrogenTank,
+    pub fuel_cell: FuelCell,
+}
+
+pub struct Electrolyzer {
+    pub efficiency: f64,  // kWh per kg of H2
+    pub power_rating_mw: f64,
+}
+
+impl HydrogenSystem {
+    pub fn produce_hydrogen(
+        &mut self,
+        power_mw: f64,
+        duration_hours: f64,
+    ) -> f64 {
+        // Convert electricity to hydrogen mass (kg)
+    }
+    
+    pub fn generate_electricity(
+        &mut self,
+        hydrogen_kg: f64,
+    ) -> f64 {
+        // Convert hydrogen back to electricity via fuel cell
+    }
+}
+```
+
+---
+
+### Domain 5: Microgrids & Distributed Energy
+
+#### `tpt-nrg-microgrid`
+
+Microgrid control and islanding.
+
+```rust
+pub struct MicrogridController {
+    pub grid_connected: bool,
+    pub assets: Vec<DerAsset>,
+    pub control_strategy: ControlStrategy,
+}
+
+pub enum ControlStrategy {
+    GridFollowing,  // Follows grid voltage/frequency
+    GridForming,    // Establishes grid voltage/frequency
+    DroopControl { droop_coefficient: f64 },
+}
+
+impl MicrogridController {
+    pub fn detect_islanding(
+        &self,
+        voltage: f64,
+        frequency: f64,
+        rate_of_change: f64,
+    ) -> bool {
+        // Detect loss of mains based on voltage/frequency deviations
+    }
+    
+    pub fn transition_to_island(&mut self) -> TransitionResult {
+        // Shed non-critical loads
+        // Ramp up storage/backup generation
+        // Establish new voltage/frequency reference
+    }
+    
+    pub fn resynchronize(&mut self) -> SyncResult {
+        // Match phase, frequency, and voltage with main grid
+    }
+}
+```
+
+#### `tpt-nrg-vpp`
+
+Virtual Power Plant aggregation.
+
+```rust
+pub struct VirtualPowerPlant {
+    pub assets: Vec<DerAsset>,
+    pub aggregation_model: AggregationModel,
+}
+
+impl VirtualPowerPlant {
+    pub fn calculate_flexible_capacity(
+        &self,
+        market_signal: MarketSignal,
+    ) -> FlexibleCapacity {
+        // Calculate total MW available for demand response
+    }
+    
+    pub fn dispatch_assets(
+        &mut self,
+        target_mw: f64,
+    ) -> DispatchPlan {
+        // Optimize which assets to dispatch to meet target
+    }
+}
+```
+
+---
+
+### Domain 6: Dispatch & Economics
+
+#### `tpt-nrg-dispatch`
+
+Unit commitment and economic dispatch.
+
+```rust
+pub struct DispatchOptimizer {
+    pub generators: Vec<Generator>,
+    pub load_forecast: Vec<f64>,
+    pub renewable_forecast: Vec<f64>,
+    pub storage: Vec<BatteryStorage>,
+}
+
+impl DispatchOptimizer {
+    pub fn unit_commitment(
+        &self,
+        horizon_hours: u32,
+    ) -> UnitCommitmentResult {
+        // Mixed-Integer Linear Programming (MILP)
+        // Determine which thermal generators to turn on/off
+        // Consider minimum up/down times, startup costs
+    }
+    
+    pub fn economic_dispatch(
+        &self,
+        total_load_mw: f64,
+        committed_generators: &[GeneratorId],
+    ) -> EconomicDispatchResult {
+        // Lambda iteration or quadratic programming
+        // Minimize total generation cost subject to power balance
+    }
+    
+    pub fn storage_arbitrage(
+        &self,
+        price_forecast: Vec<f64>,
+    ) -> ArbitragePlan {
+        // Determine optimal charge/discharge schedule
+        // Buy low, sell high
+    }
+}
+
+pub struct EconomicDispatchResult {
+    pub generator_outputs: HashMap<GeneratorId, f64>,
+    pub total_cost: f64,
+    pub marginal_cost: f64,  // Lambda ($/MWh)
+    pub losses_mw: f64,
+}
+```
+
+#### `tpt-nrg-economics`
+
+Energy economics and project finance.
+
+```rust
+pub struct EconomicsCalculator;
+
+impl EconomicsCalculator {
+    pub fn levelized_cost_of_energy(
+        &self,
+        capital_cost: f64,
+        opex_annual: f64,
+        fuel_cost_annual: f64,
+        annual_generation_mwh: f64,
+        discount_rate: f64,
+        project_life_years: u32,
+    ) -> f64 {
+        // LCOE = (CAPEX + Σ(OPEX + FUEL) / (1+r)^t) / Σ(Generation / (1+r)^t)
+    }
+    
+    pub fn net_present_value(
+        &self,
+        cash_flows: &[f64],
+        discount_rate: f64,
+    ) -> f64 {
+        // NPV calculation for project feasibility
+    }
+    
+    pub fn internal_rate_of_return(
+        &self,
+        cash_flows: &[f64],
+    ) -> f64 {
+        // IRR calculation (find rate where NPV = 0)
+    }
+    
+    pub fn carbon_intensity(
+        &self,
+        generation_mix: &HashMap<GeneratorType, f64>,
+    ) -> f64 {
+        // Calculate kg CO2 per MWh based on generation mix
+    }
+}
+```
+
+---
+
+## 6. Cross-Repo Integration (The Energy Cycle)
+
+`tpt-energy` acts as the consumer of device-level physics from other TPT repositories.
+
+```rust
+// Example: Integrating battery degradation from tpt-materials
+use tpt_materials::BatteryDegradationModel;
+use tpt_energy::storage::BatteryStorage;
+
+fn create_grid_battery(materials_model: BatteryDegradationModel) -> BatteryStorage {
+    let degradation_curve = materials_model.calculate_capacity_fade(
+        cycles: 10000,
+        temperature_c: 25.0,
+    );
+    
+    BatteryStorage {
+        capacity_mwh: 100.0,
+        power_rating_mw: 25.0,
+        state_of_charge: 0.5,
+        round_trip_efficiency: 0.90,
+        degradation_model: Some(DegradationModel {
+            cycle_life: 10000,
+            calendar_life_years: 15.0,
+            dod_curve: degradation_curve,
+        }),
+    }
+}
+
+// Example: Integrating wind turbine power curve from tpt-transport
+use tpt_transport::aero::WindTurbinePowerCurve;
+use tpt_energy::resource::WindFarm;
+
+fn create_wind_farm(turbine_curve: WindTurbinePowerCurve) -> WindFarm {
+    let turbines = vec![
+        WindTurbine {
+            position: (0.0, 0.0),
+            power_curve: turbine_curve.clone(),
+        },
+        // ... more turbines
+    ];
+    
+    WindFarm {
+        turbines,
+        wake_model: WakeModel::JensenPark { wake_decay_constant: 0.075 },
+    }
+}
+```
+
+---
+
+## 7. WASM Integration
+
+`tpt-nrg-wasm` compiles the energy system stack to WebAssembly for browser-based planning and edge control.
+
+```rust
+#[wasm_bindgen]
+pub struct WasmPowerFlowSolver {
+    solver: PowerFlowSolver,
+}
+
+#[wasm_bindgen]
+impl WasmPowerFlowSolver {
+    #[wasm_bindgen(constructor)]
+    pub fn new(system_json: &str) -> WasmPowerFlowSolver {
+        // Parse energy system from JSON
+    }
+    
+    pub fn solve(&self) -> WasmPowerFlowResult {
+        // Run Newton-Raphson in browser
+    }
+}
+
+#[wasm_bindgen]
+pub struct WasmMicrogridController {
+    controller: MicrogridController,
+}
+
+#[wasm_bindgen]
+impl WasmMicrogridController {
+    pub fn step(
+        &mut self,
+        voltage: f64,
+        frequency: f64,
+        load_mw: f64,
+        solar_mw: f64,
+    ) -> ControlAction {
+        // Run one control loop iteration
+        // Can be called at 60Hz in browser or on edge device
+    }
+}
+```
+
+**WASM Use Cases:**
+- **Interactive Grid Planning:** Utility planners can drag-and-drop buses/branches in a browser and see real-time power flow convergence.
+- **Edge Microgrid Control:** Compile `tpt-nrg-microgrid` to bare-metal WASM for real-time islanding control on industrial gateways.
+- **Financial Dashboards:** Run LCOE and arbitrage calculations directly in the browser without exposing proprietary financial models to a cloud server.
+
+---
+
+## 8. MIT Chain Enforcement
+
+### `deny.toml`
+
+```toml
+[licenses]
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "Unicode-3.0"
+]
+
+copyleft = "deny"
+unlicensed = "deny"
+allow-osi-fsf-free = "neither"
+```
+
+### License Traps to Avoid
+
+| Domain | GPL/Proprietary Trap | MIT Solution |
+|---|---|---|
+| Power Flow | PSS/E, DIgSILENT, ETAP (Proprietary) | Pure Rust Newton-Raphson via `tpt-math` |
+| Open Source | MATPOWER (MATLAB), pandapower (Python) | Standalone Rust binaries, no runtime dependencies |
+| Optimization | Gurobi, CPLEX (Proprietary) | `tpt-math-optimize-general` (MILP/LP solvers) |
+| Solar Models | NREL SAM (BSD but C++/Python heavy) | Clean-room SPA implementation in Rust |
+| Microgrid | Homer Pro (Proprietary) | Clean-room dispatch and islanding logic |
+
+---
+
+## 9. Testing & Validation Strategy
+
+### Verification & Validation (V&V)
+
+```rust
+#[cfg(test)]
+mod verification_tests {
+    use super::*;
+    
+    #[test]
+    fn test_ieee_14_bus_power_flow() {
+        // Load IEEE 14-bus test case
+        // Run Newton-Raphson
+        // Compare bus voltages to published IEEE results
+    }
+    
+    #[test]
+    fn test_weibull_distribution() {
+        // Verify Weibull PDF integrates to 1.0
+    }
+    
+    #[test]
+    fn test_economic_dispatch_lambda() {
+        // Verify marginal cost (lambda) equals incremental cost
+    }
+}
+```
+
+### Benchmark Models
+
+```text
+test-data/golden/
+├── powerflow/
+│   ├── ieee-14-bus.json
+│   ├── ieee-30-bus.json
+│   ├── ieee-57-bus.json
+│   ├── ieee-118-bus.json
+│   └── ieee-300-bus.json
+├── solar/
+│   ├── nrel-spa-zenith.json
+│   └── pv-output-derating.json
+├── wind/
+│   ├── jensen-wake-deficit.json
+│   └── weibull-probability.json
+├── storage/
+│   ├── battery-soc-cycling.json
+│   └── hydrogen-efficiency.json
+└── dispatch/
+    ├── unit-commitment-24hr.json
+    └── economic-dispatch-5gen.json
+```
+
+### Validation Standards
+
+- **IEEE:** IEEE 14, 30, 57, 118, 300 bus test cases
+- **IEC:** IEC 61850 (Substation automation), IEC 61970 (CIM)
+- **NREL:** NREL Solar Position Algorithm (SPA) validation
+- **NERC:** North American Electric Reliability Corporation standards
+
+---
+
+## 10. Open Source Community & Contribution
+
+### Contribution Workflow
+
+```text
+1. Fork repository
+2. Create feature branch: `feature/dc-powerflow`
+3. Write code + tests
+4. Run `cargo fmt`, `cargo clippy`, `cargo test`
+5. Run `cargo deny check licenses`
+6. Submit PR with DCO sign-off
+7. RFC discussion for new dispatch algorithms
+8. Merge after 2 approvals
+```
+
+### RFC Process
+
+New power flow methods or market models require an RFC:
+
+```text
+rfcs/
+├── 0001-sparse-powerflow.md
+├── 0002-battery-degradation-integration.md
+├── 0003-microgrid-islanding.md
+├── 0004-hydrogen-electrolysis.md
+└── 0005-virtual-power-plant.md
+```
+
+---
+
+## 11. Phased Delivery Plan
+
+### Phase 1: Foundation (Months 1-3)
+- `tpt-nrg-core`, `tpt-nrg-topology`, `tpt-nrg-timeseries`
+- Basic network graph and Y-bus builder
+- **Milestone:** Parse IEEE 14-bus data, build admittance matrix
+
+### Phase 2: Power Flow (Months 4-6)
+- `tpt-nrg-powerflow` (Newton-Raphson, DC Power Flow)
+- `tpt-nrg-fault` (Symmetrical components, short circuit)
+- **Milestone:** Solve IEEE 14, 30, 57 bus test cases with <1% error
+
+### Phase 3: Resource Modeling (Months 7-9)
+- `tpt-nrg-solar` (SPA, POA irradiance, PV output)
+- `tpt-nrg-wind` (Weibull, Jensen wake model)
+- `tpt-nrg-load` (Load forecasting, temperature sensitivity)
+- **Milestone:** Calculate 24-hour solar and wind generation profiles
+
+### Phase 4: Storage & Microgrids (Months 10-12)
+- `tpt-nrg-battery` (SoC tracking, degradation integration)
+- `tpt-nrg-microgrid` (Islanding detection, grid-forming control)
+- `tpt-nrg-hydrogen` (Electrolyzer efficiency)
+- **Milestone:** Simulate microgrid islanding and battery dispatch
+
+### Phase 5: Dispatch & Economics (Months 13-15)
+- `tpt-nrg-dispatch` (Unit commitment MILP, economic dispatch)
+- `tpt-nrg-economics` (LCOE, NPV, IRR, carbon intensity)
+- **Milestone:** Optimize 24-hour unit commitment for 10 generators
+
+### Phase 6: Advanced Grid Features (Months 16-18)
+- `tpt-nrg-state-estimation` (Kalman filtering for grid state)
+- `tpt-nrg-protection` (Relay coordination)
+- `tpt-nrg-vpp` (Virtual Power Plant aggregation)
+- **Milestone:** Real-time state estimation on 118-bus system
+
+### Phase 7: WASM & Edge Control (Months 19-21)
+- `tpt-nrg-wasm` (Browser compilation)
+- Real-time microgrid control loop optimization
+- **Milestone:** Browser-based interactive power flow dashboard
+
+### Phase 8: Ecosystem Integration (Months 22-24)
+- Full integration with `tpt-materials`, `tpt-transport`, `tpt-electronics`
+- **Milestone:** End-to-end "Energy Cycle" simulation (Material degradation → Device physics → Grid dispatch)
+
+---
+
+
+---
+
+## 13. README Template
+
+```markdown
+# tpt-energy
+
+A fully open-source, MIT-licensed computational engine for macro-scale energy systems, power grids, and renewable integration.
+
+## Crates
+
+| Crate | Description | Status |
+|---|---|---|
+| `tpt-nrg-core` | Core energy system types | ✅ Stable |
+| `tpt-nrg-powerflow` | AC/DC power flow solvers | ✅ Stable |
+| `tpt-nrg-solar` | Solar irradiance & PV modeling | ✅ Stable |
+| `tpt-nrg-wind` | Wind farm wake models | ✅ Stable |
+| `tpt-nrg-battery` | Grid-scale storage dispatch | 🚧 Alpha |
+| `tpt-nrg-dispatch` | Unit commitment & economic dispatch | 🚧 Alpha |
+| `tpt-nrg-microgrid` | Islanding & grid-forming control | 📋 Planned |
+| `tpt-nrg-economics` | LCOE, NPV, carbon intensity | 📋 Planned |
+
+## Quick Start
+
+```rust
+use tpt_energy::core::EnergySystem;
+use tpt_energy::powerflow::PowerFlowSolver;
+
+fn main() {
+    let system = EnergySystem::from_json("ieee-14-bus.json").unwrap();
+    let solver = PowerFlowSolver::new(system, PowerFlowMethod::NewtonRaphson);
+    let result = solver.solve().unwrap();
+    println!("Converged in {} iterations", result.iterations);
+    println!("Total losses: {} MW", result.losses_mw);
+}
+```
+
+## The Energy Cycle Integration
+
+`tpt-energy` integrates seamlessly with other TPT repositories:
+- `tpt-materials` → Battery degradation curves
+- `tpt-transport` → Wind turbine power curves
+- `tpt-electronics` → Inverter clipping limits
+
+## License
+
+Licensed under either of
+
+- MIT license ([LICENSE-MIT](LICENSE-MIT))
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE))
+
+at your option.
+
+
+---
+
+## 14. Summary
+
+`tpt-energy` is a fully open-source, MIT-licensed, pure-Rust computational engine for macro-scale energy systems:
+
+- **Resource Modeling** — Solar SPA, wind wake models, load forecasting
+- **Power Systems** — AC/DC power flow, fault analysis, state estimation
+- **Energy Storage** — Battery dispatch, hydrogen electrolysis, thermal storage
+- **Microgrids** — Islanding detection, grid-forming control, VPP
+- **Dispatch & Economics** — Unit commitment, economic dispatch, LCOE, carbon intensity
+
+All crates maintain the strict MIT chain, leverage the TPT substrates (`tpt-math`, `tpt-engineering`, `tpt-science`), and compile to WebAssembly for browser-based planning and real-time edge control.
+
+No proprietary cores. No GPL traps. No vendor lock-in. Just open source.
