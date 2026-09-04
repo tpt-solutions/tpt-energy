@@ -21,6 +21,10 @@ missing_panics_doc = "warn"
 tpt-nrg-core = { workspace = true }
 thiserror = { workspace = true }
 log = { workspace = true }
+tpt-math-linalg-sparse = { workspace = true, optional = true }
+
+[features]
+substrate = ["dep:tpt-math-linalg-sparse"]
 
 [dev-dependencies]
 approx = { workspace = true }

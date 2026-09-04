@@ -22,6 +22,10 @@ tpt-nrg-core = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
 log = { workspace = true }
+tpt-eng-materials = { workspace = true, optional = true }
+
+[features]
+substrate = ["dep:tpt-eng-materials"]
 
 [dev-dependencies]
 approx = { workspace = true }

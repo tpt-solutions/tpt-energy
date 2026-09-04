@@ -22,6 +22,11 @@ tpt-nrg-core = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
 log = { workspace = true }
+tpt-math-prob-dist = { workspace = true, optional = true }
+tpt-math-prob-core = { workspace = true, optional = true }
+
+[features]
+substrate = ["dep:tpt-math-prob-dist", "dep:tpt-math-prob-core"]
 
 [dev-dependencies]
 approx = { workspace = true }

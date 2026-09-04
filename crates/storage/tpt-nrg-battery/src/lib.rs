@@ -5,8 +5,13 @@
 
 #![deny(missing_docs)]
 
+#[cfg(feature = "substrate")]
+mod substrate;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+
+#[cfg(feature = "substrate")]
+pub use substrate::{nmc811_library, nmc811_specific_capacity_ah_per_kg};
 
 /// Result alias for `tpt-nrg-battery`.
 pub type BatteryResult<T> = Result<T, BatteryError>;

@@ -8,8 +8,13 @@
 
 #![deny(missing_docs)]
 
+#[cfg(feature = "substrate")]
+mod substrate;
 use serde::{Deserialize, Serialize};
 use tpt_nrg_core::EnergySystem;
+
+#[cfg(feature = "substrate")]
+pub use substrate::{measurement_lowpass, smooth_voltage_measurements};
 
 /// A measurement in the state-estimation problem.
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -30,7 +30,7 @@ members = [
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.75"
+rust-version = "1.84"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/tpt-solutions/tpt-energy"
 homepage = "https://github.com/tpt-solutions/tpt-energy"
@@ -71,12 +71,22 @@ tpt-nrg-carbon = { path = "crates/economics/tpt-nrg-carbon", version = "0.1.0" }
 
 # External substrate crates (TPT ecosystem)
 #
-# These are intentionally NOT listed in `[workspace.dependencies]` yet because
-# they are not published to crates.io. The tpt-nrg-* crates use self-contained
-# implementations of the relevant algorithms (Newton–Raphson, Weibull PDF,
-# clear-sky models, etc.) and expose a `tpt-substrate` feature that swaps
-# in the upstream implementations when the registry is available. Adding the
-# substrate wiring is tracked in `todo.md` Phase 0 / Phase 8.
+# These are pulled from crates.io under the TPT Solutions org. The tpt-nrg-*
+# crates use self-contained implementations of the relevant algorithms
+# (Newton–Raphson, Weibull PDF, clear-sky models, etc.) by default and expose
+# a `substrate` feature that swaps in the upstream implementations when
+# enabled. Adding the substrate wiring is tracked in `todo.md` Phase 0 /
+# Phase 8.
+tpt-math-linalg = "0.1"
+tpt-math-linalg-dense = "0.1"
+tpt-math-linalg-sparse = "0.1"
+tpt-math-optimize-general = "0.1"
+tpt-math-optimize-convex = "0.1"
+tpt-math-prob-dist = "0.1"
+tpt-math-prob-core = "0.1"
+tpt-math-signal-filter = "0.1"
+tpt-sci-astro = "0.1"
+tpt-eng-materials = "0.1"
 
 # Third-party
 serde = { version = "1.0", features = ["derive"] }

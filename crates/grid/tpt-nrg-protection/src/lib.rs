@@ -50,10 +50,12 @@ pub enum RelayCurve {
 impl RelayCurve {
     /// Trip time (s) for the given current multiple `i = I/Ipickup`.
     pub fn trip_time(&self, i: f64) -> f64 {
+        // IEC 60255-151 inverse-time overcurrent relay characteristics.
+        let denom = (i - 1.0).max(0.001);
         match self {
-            RelayCurve::StandardInverse => 0.14 / (i.powi(0) - 1.0).max(0.001).powf(0.02),
-            RelayCurve::VeryInverse => 13.5 / i.max(1.001),
-            RelayCurve::ExtremelyInverse => 80.0 / (i * i).max(0.001),
+            RelayCurve::StandardInverse => 0.14 / denom.powf(0.02),
+            RelayCurve::VeryInverse => 13.5 / denom,
+            RelayCurve::ExtremelyInverse => 80.0 / denom.powf(2.0),
             RelayCurve::DefiniteTime => 0.1,
         }
     }

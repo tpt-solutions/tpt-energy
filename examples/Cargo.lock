@@ -333,6 +333,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "chrono",
+ "serde_json",
  "tpt-nrg-battery",
  "tpt-nrg-core",
  "tpt-nrg-economic-dispatch",

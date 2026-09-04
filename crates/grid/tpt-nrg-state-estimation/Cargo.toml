@@ -23,6 +23,10 @@ tpt-nrg-topology = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
 log = { workspace = true }
+tpt-math-signal-filter = { workspace = true, optional = true }
+
+[features]
+substrate = ["dep:tpt-math-signal-filter"]
 
 [dev-dependencies]
 approx = { workspace = true }

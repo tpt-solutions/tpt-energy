@@ -62,13 +62,18 @@ pub(crate) fn bus_schedules_pu(system: &EnergySystem) -> (Vec<f64>, Vec<f64>) {
             q_sched[*idx] -= l.q_mvar / base;
         }
     }
-    // Add explicit generators
+    // Add explicit generators (P only — Q is free for PV/slack buses).
     for g in &system.generators {
         if !g.in_service {
             continue;
         }
         if let Some(Some(idx)) = map.get(g.bus_id) {
             p_sched[*idx] += g.p_schedule_mw / base;
+            // Zero out Q schedule at generator buses — Q is the unknown for PV
+            // buses, and slack Q is determined by the system balance.
+            if matches!(system.buses[*idx].bus_type, tpt_nrg_core::BusType::Pv | tpt_nrg_core::BusType::Slack) {
+                q_sched[*idx] = 0.0;
+            }
         }
     }
     (p_sched, q_sched)
@@ -79,9 +84,15 @@ pub(crate) fn flat_start_voltages(system: &EnergySystem) -> (Vec<f64>, Vec<f64>)
     let n = system.buses.len();
     let mut v = vec![1.0_f64; n];
     let mut theta = vec![0.0_f64; n];
+    // Flat start: PV/slack buses use their voltage-magnitude setpoint, PQ
+    // buses start at 1.0 pu, and every angle starts at 0. This is the most
+    // robust Newton–Raphson initializer for larger systems.
     for (i, b) in system.buses.iter().enumerate() {
-        v[i] = b.voltage_magnitude_pu;
-        theta[i] = b.voltage_angle_rad;
+        v[i] = match b.bus_type {
+            tpt_nrg_core::BusType::Slack | tpt_nrg_core::BusType::Pv => b.voltage_magnitude_pu,
+            _ => 1.0,
+        };
+        theta[i] = 0.0;
     }
     (v, theta)
 }

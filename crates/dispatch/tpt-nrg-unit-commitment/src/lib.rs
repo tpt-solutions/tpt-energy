@@ -9,7 +9,12 @@
 
 #![deny(missing_docs)]
 
+#[cfg(feature = "substrate")]
+mod substrate;
 use serde::{Deserialize, Serialize};
+
+#[cfg(feature = "substrate")]
+pub use substrate::economic_dispatch_substrate;
 
 use tpt_nrg_core::EnergySystem;
 

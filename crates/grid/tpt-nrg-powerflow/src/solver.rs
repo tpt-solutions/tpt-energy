@@ -116,9 +116,7 @@ impl PowerFlowSolver {
                 crate::gauss_seidel::solve(system, self.options)
             }
             PowerFlowMethod::FastDecoupled => {
-                // Fall back to Newton–Raphson for now (the FDPF is a small
-                // variant; we keep the dispatch surface for the API).
-                crate::newton_raphson::solve(system, self.options)
+                crate::fast_decoupled::solve(system, self.options)
             }
             PowerFlowMethod::DcPowerFlow => crate::dc::solve(system),
         }

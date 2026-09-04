@@ -40,14 +40,14 @@ flowchart LR
 | `tpt-nrg-load`                    | Load forecasting & demand response           | Alpha    |
 | `tpt-nrg-powerflow`               | AC/DC power flow solvers                     | Alpha    |
 | `tpt-nrg-fault`                   | Short-circuit (fault) analysis               | Alpha    |
-| `tpt-nrg-state-estimation`        | Kalman-filter grid state estimator           | Planned  |
-| `tpt-nrg-protection`              | Relay coordination & protection zones        | Planned  |
+| `tpt-nrg-state-estimation`        | Kalman-filter grid state estimator           | Alpha    |
+| `tpt-nrg-protection`              | Relay coordination & protection zones        | Alpha    |
 | `tpt-nrg-battery`                 | Battery storage & degradation                | Alpha    |
 | `tpt-nrg-hydrogen`                | Electrolyzer / fuel-cell / H2 storage        | Alpha    |
-| `tpt-nrg-thermal-storage`         | Thermal storage                              | Planned  |
+| `tpt-nrg-thermal-storage`         | Thermal storage                              | Alpha    |
 | `tpt-nrg-der`                     | Distributed energy resources                 | Alpha    |
 | `tpt-nrg-islanding`               | Loss-of-mains detection & resync             | Alpha    |
-| `tpt-nrg-vpp`                     | Virtual power plant aggregation              | Planned  |
+| `tpt-nrg-vpp`                     | Virtual power plant aggregation              | Alpha    |
 | `tpt-nrg-unit-commitment`         | MILP unit commitment                         | Alpha    |
 | `tpt-nrg-economic-dispatch`       | Economic dispatch & storage arbitrage        | Alpha    |
 | `tpt-nrg-reserve`                 | Spinning & contingency reserve               | Alpha    |

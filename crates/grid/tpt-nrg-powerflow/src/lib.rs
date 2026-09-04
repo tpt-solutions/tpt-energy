@@ -10,6 +10,7 @@
 #![deny(missing_docs)]
 
 mod dc;
+mod fast_decoupled;
 mod gauss_seidel;
 mod newton_raphson;
 mod result;

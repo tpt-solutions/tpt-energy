@@ -27,6 +27,18 @@ pub fn solve(
     let (p_sched, q_sched) = bus_schedules_pu(system);
     let (mut v, mut theta) = flat_start_voltages(system);
 
+    // DC power-flow warm start: solve `B'·θ = P_sched` for the non-slack
+    // angles and use those as initial conditions for AC Newton–Raphson. This
+    // dramatically improves convergence for systems with widely varying
+    // voltage angles (e.g. IEEE 57/118).
+    if let Ok(dc) = crate::dc::solve(system) {
+        for (i, t) in theta.iter_mut().enumerate() {
+            if i < dc.bus_voltage_angle_rad.len() {
+                *t = dc.bus_voltage_angle_rad[i];
+            }
+        }
+    }
+
     // Variable ordering: angle of every non-slack bus, then |V| of every
     // non-slack PQ bus (PV buses have V fixed at the setpoint).
     let mut angle_idx: Vec<usize> = (0..n).filter(|&i| i != slack).collect();
@@ -389,6 +401,7 @@ mod tests {
     #[test]
     fn ieee14_solves() {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
             .join("..")
             .join("..")
             .join("test-data")

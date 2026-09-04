@@ -23,6 +23,10 @@ chrono = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
 log = { workspace = true }
+tpt-sci-astro = { workspace = true, optional = true }
+
+[features]
+substrate = ["dep:tpt-sci-astro"]
 
 [dev-dependencies]
 approx = { workspace = true }

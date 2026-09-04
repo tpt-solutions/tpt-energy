@@ -10,6 +10,8 @@
 
 #![deny(missing_docs)]
 
+#[cfg(feature = "substrate")]
+mod substrate;
 mod irradiance;
 mod position;
 mod pv;
@@ -17,3 +19,5 @@ mod pv;
 pub use irradiance::{Irradiance, SkyCondition};
 pub use position::{SolarModel, SolarPosition};
 pub use pv::{PvPlant, PvPlantConfig};
+#[cfg(feature = "substrate")]
+pub use substrate::{earth_distance_correction_ghi, earth_sun_distance_au};

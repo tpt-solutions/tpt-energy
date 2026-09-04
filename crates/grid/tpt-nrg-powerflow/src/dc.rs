@@ -80,7 +80,6 @@ pub fn solve(system: &EnergySystem) -> Result<PowerFlowResult, PowerFlowError> {
     let map = bus_index_map(system);
     let base = system.base_mva;
     let mut flows = Vec::with_capacity(system.branches.len());
-    let mut total_p = 0.0;
     for br in &system.branches {
         let i = map.get(br.from_bus).and_then(|x| *x);
         let j = map.get(br.to_bus).and_then(|x| *x);
@@ -96,7 +95,6 @@ pub fn solve(system: &EnergySystem) -> Result<PowerFlowResult, PowerFlowError> {
             }
             _ => (0.0, 0.0),
         };
-        total_p += p_from_mw + p_to_mw;
         let s = p_from_mw.abs();
         let loading = if br.rating_mva > 0.0 { s / br.rating_mva } else { 0.0 };
         flows.push(crate::result::BranchFlow {
@@ -108,16 +106,28 @@ pub fn solve(system: &EnergySystem) -> Result<PowerFlowResult, PowerFlowError> {
             loading_fraction: loading,
         });
     }
-    let total_losses_mw = 0.5 * total_p; // DC ignores losses (sum should be 0)
+    // DC ignores losses (P_ij + P_ji = 0 for every branch).
+
+    // Slack dispatch = negative of the sum of all other bus p_sched values
+    // (DC power balance: slack absorbs whatever is left over).
+    let mut slack_p_pu: f64 = 0.0;
+    for (i, &p) in p_sched.iter().enumerate() {
+        if i != slack {
+            slack_p_pu -= p;
+        }
+    }
 
     let mut gen_p = vec![0.0_f64; system.generators.len()];
-    let map = bus_index_map(system);
     for (k, g) in system.generators.iter().enumerate() {
         if !g.in_service {
             continue;
         }
         if let Some(Some(bi)) = map.get(g.bus_id) {
-            gen_p[k] = p_sched[*bi] * base;
+            if *bi == slack {
+                gen_p[k] = slack_p_pu * base;
+            } else {
+                gen_p[k] = p_sched[*bi] * base;
+            }
         }
     }
     let gen_q = vec![0.0_f64; system.generators.len()];
@@ -129,7 +139,7 @@ pub fn solve(system: &EnergySystem) -> Result<PowerFlowResult, PowerFlowError> {
         bus_voltage_magnitude_pu: v,
         bus_voltage_angle_rad: theta,
         branch_flows: flows,
-        total_losses_mw,
+        total_losses_mw: 0.0,
         total_losses_mvar: 0.0,
         generator_p_mw: gen_p,
         generator_q_mvar: gen_q,

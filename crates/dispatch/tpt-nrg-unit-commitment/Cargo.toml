@@ -22,6 +22,16 @@ tpt-nrg-core = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
 log = { workspace = true }
+tpt-math-optimize-general = { workspace = true, optional = true }
+tpt-math-optimize-convex = { workspace = true, optional = true }
+tpt-math-linalg-dense = { workspace = true, optional = true }
+
+[features]
+substrate = [
+    "dep:tpt-math-optimize-general",
+    "dep:tpt-math-optimize-convex",
+    "dep:tpt-math-linalg-dense",
+]
 
 [dev-dependencies]
 approx = { workspace = true }
