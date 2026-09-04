@@ -79,20 +79,35 @@ pub(crate) fn bus_schedules_pu(system: &EnergySystem) -> (Vec<f64>, Vec<f64>) {
     (p_sched, q_sched)
 }
 
-/// Initialize the voltage vector (flat start, 1.0 pu, 0 rad).
+/// Initialize the voltage vector.
+///
+/// Strategy:
+/// 1. If any bus in the JSON has a non-trivial `voltage_angle_rad` schedule
+///    (i.e. not all zero), use those angles AND voltage magnitudes as the
+///    warm start — this lets cases like IEEE 57-bus, where the published
+///    profile spans ±0.5 rad in angle and ±10% in |V|, start much closer
+///    to the solution. PQ buses normally have no setpoint, but if the
+///    JSON includes one it is treated as an *initial guess* — the solver
+///    is still free to move it.
+/// 2. Otherwise fall back to a flat start (1.0 pu, 0 rad) on PQ buses, with
+///    PV/slack buses at their voltage-magnitude setpoint and angle = 0.
 pub(crate) fn flat_start_voltages(system: &EnergySystem) -> (Vec<f64>, Vec<f64>) {
     let n = system.buses.len();
     let mut v = vec![1.0_f64; n];
     let mut theta = vec![0.0_f64; n];
-    // Flat start: PV/slack buses use their voltage-magnitude setpoint, PQ
-    // buses start at 1.0 pu, and every angle starts at 0. This is the most
-    // robust Newton–Raphson initializer for larger systems.
+
+    // Detect "JSON-supplied angle schedule" vs "default flat start".
+    let supplied = system
+        .buses
+        .iter()
+        .any(|b| b.voltage_angle_rad.abs() > 1e-6);
+
     for (i, b) in system.buses.iter().enumerate() {
         v[i] = match b.bus_type {
             tpt_nrg_core::BusType::Slack | tpt_nrg_core::BusType::Pv => b.voltage_magnitude_pu,
             _ => 1.0,
         };
-        theta[i] = 0.0;
+        theta[i] = if supplied { b.voltage_angle_rad } else { 0.0 };
     }
     (v, theta)
 }

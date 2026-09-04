@@ -1,0 +1,37 @@
+{
+  "description": "Reference round-trip efficiency and H2 throughput for tpt-nrg-hydrogen. PEM electrolyzer at 50 kWh/kg H2, PEM fuel cell at 17 kWh/kg H2. Ideal storage tank (no boil-off).",
+  "config": {
+    "electrolyzer_kwh_per_kg": 50.0,
+    "electrolyzer_power_mw": 10.0,
+    "fuel_cell_kwh_per_kg": 17.0,
+    "fuel_cell_power_mw": 5.0,
+    "tank_capacity_kg": 100.0
+  },
+  "cases": [
+    {
+      "input_mwh": 1.0,
+      "expected_h2_kg": 20.0,
+      "label": "1 MWh in -> 20 kg H2 (1000 kWh / 50 kWh/kg)"
+    },
+    {
+      "input_mwh": 5.0,
+      "expected_h2_kg": 100.0,
+      "label": "5 MWh in -> 100 kg H2 (tank cap reached)"
+    },
+    {
+      "discharge_mw": 5.0,
+      "duration_h": 1.0,
+      "expected_out_mwh": 0.85,
+      "label": "5 MW for 1h from 100 kg -> 100 * 17 / 1000 = 1.7 MWh, but capped by 85 kg at start"
+    },
+    {
+      "expected_round_trip_efficiency": 0.34,
+      "label": "17 / 50 = 34% ideal round-trip"
+    }
+  ],
+  "tolerance": {
+    "efficiency_abs": 0.01,
+    "h2_kg_abs": 0.01,
+    "out_mwh_abs": 0.01
+  }
+}

@@ -34,26 +34,29 @@ flowchart LR
 | `tpt-nrg-topology`                | Graph & Y-bus construction                   | Stable   |
 | `tpt-nrg-timeseries`              | Load/generation/price profiles               | Stable   |
 | `tpt-nrg-wasm`                    | Browser/edge WASM bindings                   | Alpha    |
-| `tpt-nrg-solar`                   | Solar position & PV output                   | Alpha    |
-| `tpt-nrg-wind`                    | Wind power & wake losses                     | Alpha    |
-| `tpt-nrg-hydro`                   | Hydro power calculation                      | Alpha    |
-| `tpt-nrg-load`                    | Load forecasting & demand response           | Alpha    |
-| `tpt-nrg-powerflow`               | AC/DC power flow solvers                     | Alpha    |
-| `tpt-nrg-fault`                   | Short-circuit (fault) analysis               | Alpha    |
-| `tpt-nrg-state-estimation`        | Kalman-filter grid state estimator           | Alpha    |
-| `tpt-nrg-protection`              | Relay coordination & protection zones        | Alpha    |
-| `tpt-nrg-battery`                 | Battery storage & degradation                | Alpha    |
-| `tpt-nrg-hydrogen`                | Electrolyzer / fuel-cell / H2 storage        | Alpha    |
-| `tpt-nrg-thermal-storage`         | Thermal storage                              | Alpha    |
-| `tpt-nrg-der`                     | Distributed energy resources                 | Alpha    |
-| `tpt-nrg-islanding`               | Loss-of-mains detection & resync             | Alpha    |
-| `tpt-nrg-vpp`                     | Virtual power plant aggregation              | Alpha    |
-| `tpt-nrg-unit-commitment`         | MILP unit commitment                         | Alpha    |
-| `tpt-nrg-economic-dispatch`       | Economic dispatch & storage arbitrage        | Alpha    |
-| `tpt-nrg-reserve`                 | Spinning & contingency reserve               | Alpha    |
+| `tpt-nrg-solar`                   | Solar position & PV output                   | Stable   |
+| `tpt-nrg-wind`                    | Wind power & wake losses                     | Stable   |
+| `tpt-nrg-hydro`                   | Hydro power calculation                      | Stable   |
+| `tpt-nrg-load`                    | Load forecasting & demand response           | Stable   |
+| `tpt-nrg-powerflow`               | AC/DC power flow solvers                     | Stable   |
+| `tpt-nrg-fault`                   | Short-circuit (fault) analysis               | Stable   |
+| `tpt-nrg-state-estimation`        | DC-approx WLS grid state estimator           | Alpha    |
+| `tpt-nrg-protection`              | Relay coordination & protection zones        | Stable   |
+| `tpt-nrg-battery`                 | Battery storage & degradation                | Stable   |
+| `tpt-nrg-hydrogen`                | Electrolyzer / fuel-cell / H2 storage        | Stable   |
+| `tpt-nrg-thermal-storage`         | Thermal storage                              | Stable   |
+| `tpt-nrg-der`                     | Distributed energy resources                 | Stable   |
+| `tpt-nrg-islanding`               | Loss-of-mains detection & resync             | Stable   |
+| `tpt-nrg-vpp`                     | Virtual power plant aggregation              | Stable   |
+| `tpt-nrg-unit-commitment`         | Priority-list UC (MILP behind `substrate`)   | Alpha    |
+| `tpt-nrg-economic-dispatch`       | Economic dispatch & storage arbitrage        | Stable   |
+| `tpt-nrg-reserve`                 | Spinning & contingency reserve               | Stable   |
 | `tpt-nrg-lcoe`                    | LCOE / NPV / IRR                             | Stable   |
-| `tpt-nrg-market`                  | Market signal modeling                       | Alpha    |
+| `tpt-nrg-market`                  | Market signal modeling                       | Stable   |
 | `tpt-nrg-carbon`                  | Carbon intensity                             | Stable   |
+
+See [`docs/book/src/crate-status.md`](docs/book/src/crate-status.md) for
+detailed maturity notes per crate.
 
 ## Quick Start
 

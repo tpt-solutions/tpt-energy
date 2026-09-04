@@ -217,18 +217,45 @@ pub fn solve(
         }
         final_mismatch = max_mis;
         debug!("NR iter {it}: mismatch = {max_mis:.3e}");
+        // Trace progress when running with the `trace` feature or when
+        // `TPT_NR_TRACE=1` is set in the environment.
+        if std::env::var("TPT_NR_TRACE").is_ok() {
+            let worst = dp
+                .iter()
+                .enumerate()
+                .max_by(|a, b| a.1.abs().partial_cmp(&b.1.abs()).unwrap())
+                .map(|(i, v)| (i, *v))
+                .unwrap_or((0, 0.0));
+            let worst_q = dq
+                .iter()
+                .enumerate()
+                .max_by(|a, b| a.1.abs().partial_cmp(&b.1.abs()).unwrap())
+                .map(|(i, v)| (i, *v))
+                .unwrap_or((0, 0.0));
+            eprintln!(
+                "NR iter {it}: mismatch = {max_mis:.6e} (worst P: bus {} = {:+.3e}, worst Q: bus {} = {:+.3e})",
+                worst.0, worst.1, worst_q.0, worst_q.1
+            );
+        }
         if max_mis < options.tolerance {
             break;
         }
 
         let dx = solve_dense(n_eq, &jac, &rhs);
-        // Update angles
+        // Damped Newton–Raphson: limit the per-iteration change in angles
+        // and voltages. Aggressive damping (0.2 rad / 0.05 pu) helps ill-
+        // conditioned systems like IEEE 57-bus avoid limit cycles while
+        // still letting well-conditioned systems (IEEE 14, 30) converge in
+        // the standard 3–7 iterations.
+        let max_angle_step = 0.2;   // ~11.5° per iteration
+        let max_v_step     = 0.05;  // 5% of rated per iteration
         for (idx, &i) in angle_idx.iter().enumerate() {
-            theta[i] += dx[idx];
+            let step = dx[idx].clamp(-max_angle_step, max_angle_step);
+            theta[i] += step;
         }
-        // Update voltages
         for (idx, &i) in v_idx.iter().enumerate() {
-            let new_v = (v[i] + dx[n_theta + idx]).clamp(0.5, 1.5);
+            let step = dx[n_theta + idx].clamp(-max_v_step, max_v_step);
+            let new_v = (v[i] + step).clamp(0.5, 1.5);
             v[i] = new_v;
         }
     }

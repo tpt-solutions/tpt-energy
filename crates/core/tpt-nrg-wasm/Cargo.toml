@@ -16,6 +16,12 @@ unsafe_code = "forbid"
 pedantic = { level = "warn", priority = -1 }
 missing_docs = "warn"
 
+[features]
+# Default = native shim (no wasm-bindgen dependency). Enable the `wasm`
+# feature when targeting `wasm32-unknown-unknown` for browser builds.
+default = []
+wasm = ["dep:wasm-bindgen", "dep:serde-wasm-bindgen"]
+
 [dependencies]
 tpt-nrg-core = { workspace = true }
 tpt-nrg-powerflow = { workspace = true }
@@ -23,5 +29,7 @@ tpt-nrg-der = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
+wasm-bindgen = { version = "0.2", optional = true }
+serde-wasm-bindgen = { version = "0.6", optional = true }
 
 [dev-dependencies]

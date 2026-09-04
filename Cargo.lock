@@ -354,6 +354,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde-wasm-bindgen"
+version = "0.6.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8302e169f0eddcc139c70f139d19d6467353af16f9fce27e8c30158036a1e16b"
+dependencies = [
+ "js-sys",
+ "serde",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "serde_core"
 version = "1.0.229"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -826,11 +837,13 @@ dependencies = [
  "approx",
  "log",
  "serde",
+ "serde_json",
  "thiserror 1.0.69",
  "tpt-math-linalg-dense",
  "tpt-math-optimize-convex",
  "tpt-math-optimize-general",
  "tpt-nrg-core",
+ "tpt-nrg-economic-dispatch",
 ]
 
 [[package]]
@@ -850,11 +863,13 @@ name = "tpt-nrg-wasm"
 version = "0.1.0"
 dependencies = [
  "serde",
+ "serde-wasm-bindgen",
  "serde_json",
  "thiserror 1.0.69",
  "tpt-nrg-core",
  "tpt-nrg-der",
  "tpt-nrg-powerflow",
+ "wasm-bindgen",
 ]
 
 [[package]]

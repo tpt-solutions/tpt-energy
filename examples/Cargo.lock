@@ -307,6 +307,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "tpt-nrg-carbon"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "serde",
+ "thiserror",
+ "tpt-nrg-core",
+]
+
+[[package]]
 name = "tpt-nrg-core"
 version = "0.1.0"
 dependencies = [
@@ -335,10 +345,12 @@ dependencies = [
  "chrono",
  "serde_json",
  "tpt-nrg-battery",
+ "tpt-nrg-carbon",
  "tpt-nrg-core",
  "tpt-nrg-economic-dispatch",
  "tpt-nrg-fault",
  "tpt-nrg-islanding",
+ "tpt-nrg-lcoe",
  "tpt-nrg-powerflow",
  "tpt-nrg-solar",
  "tpt-nrg-wind",
@@ -364,6 +376,15 @@ dependencies = [
  "thiserror",
  "tpt-nrg-battery",
  "tpt-nrg-core",
+]
+
+[[package]]
+name = "tpt-nrg-lcoe"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "serde",
+ "thiserror",
 ]
 
 [[package]]

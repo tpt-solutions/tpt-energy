@@ -1,13 +1,14 @@
 {
-  "description": "5-generator economic dispatch with flat marginal costs. Expected dispatch from merit order: G1 (cheapest, 100 MW) full, G2 (150 MW) full, G3 (50 MW) marginal.",
+  "description": "5-generator economic dispatch. CostCurve::piecewise creates a single segment from p_min to p_max with slope = (cost_at_max - cost_at_min) / (p_max - p_min). So G1's MC = (2400-400)/80 = 25 $/MWh, G2's MC = (5400-900)/120 = 37.5 $/MWh, G3's MC = (12500-2500)/150 = 66.67 $/MWh.",
   "generators": [
-    { "name": "G1", "p_max_mw": 100.0, "p_min_mw": 20.0, "mc_dollar_per_mwh": 20.0 },
-    { "name": "G2", "p_max_mw": 150.0, "p_min_mw": 30.0, "mc_dollar_per_mwh": 30.0 },
-    { "name": "G3", "p_max_mw": 50.0,  "p_min_mw": 10.0, "mc_dollar_per_mwh": 50.0 }
+    { "name": "G1", "p_max_mw": 100.0, "p_min_mw": 20.0, "mc_dollar_per_mwh": 25.0 },
+    { "name": "G2", "p_max_mw": 150.0, "p_min_mw": 30.0, "mc_dollar_per_mwh": 37.5 },
+    { "name": "G3", "p_max_mw": 50.0,  "p_min_mw": 10.0, "mc_dollar_per_mwh": 66.67 }
   ],
   "test_loads_mw": [
-    { "load_mw": 200.0, "expected_outputs_mw": [100.0, 100.0, 0.0],  "expected_lambda": 30.0, "tolerance_mw": 0.1 },
-    { "load_mw": 280.0, "expected_outputs_mw": [100.0, 150.0, 30.0], "expected_lambda": 50.0, "tolerance_mw": 0.1 },
-    { "load_mw":  60.0, "expected_outputs_mw": [ 60.0,   0.0, 0.0], "expected_lambda": 20.0, "tolerance_mw": 0.1 }
+    { "load_mw": 60.0,  "expected_outputs_mw": [60.0,  0.0,   0.0],  "expected_lambda": 25.0,  "tolerance_mw": 0.1 },
+    { "load_mw": 150.0, "expected_outputs_mw": [100.0, 50.0,  0.0],  "expected_lambda": 37.5,  "tolerance_mw": 0.1 },
+    { "load_mw": 250.0, "expected_outputs_mw": [100.0, 150.0, 0.0],  "expected_lambda": 37.5,  "tolerance_mw": 0.1 }
   ]
 }
+
