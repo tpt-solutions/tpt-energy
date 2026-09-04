@@ -1,0 +1,55 @@
+{
+  "id": "ieee14",
+  "name": "IEEE 14-Bus Test Case",
+  "base_mva": 100.0,
+  "frequency_hz": 60.0,
+  "buses": [
+    { "id": 1, "name": "Bus 1", "type": "Slack",     "voltage_magnitude_pu": 1.060, "voltage_angle_rad": 0.0,    "base_kv": 138.0 },
+    { "id": 2, "name": "Bus 2", "type": "Pv",        "voltage_magnitude_pu": 1.045, "voltage_angle_rad": -0.087, "base_kv": 138.0, "generation_mw": 40.0 },
+    { "id": 3, "name": "Bus 3", "type": "Pv",        "voltage_magnitude_pu": 1.010, "voltage_angle_rad": -0.222, "base_kv": 138.0, "generation_mw": 0.0  },
+    { "id": 4, "name": "Bus 4", "type": "Pq",        "voltage_magnitude_pu": 1.000, "voltage_angle_rad": -0.180, "base_kv": 138.0, "load_mw": 47.8, "load_mvar": -3.9 },
+    { "id": 5, "name": "Bus 5", "type": "Pq",        "voltage_magnitude_pu": 1.000, "voltage_angle_rad": -0.153, "base_kv": 138.0, "load_mw": 7.6,  "load_mvar": 1.6  },
+    { "id": 6, "name": "Bus 6", "type": "Pv",        "voltage_magnitude_pu": 1.070, "voltage_angle_rad": -0.248, "base_kv": 138.0, "generation_mw": 0.0  },
+    { "id": 7, "name": "Bus 7", "type": "Pq",        "voltage_magnitude_pu": 1.000, "voltage_angle_rad": -0.234, "base_kv": 138.0, "load_mw": 0.0  },
+    { "id": 8, "name": "Bus 8", "type": "Pv",        "voltage_magnitude_pu": 1.090, "voltage_angle_rad": -0.234, "base_kv": 138.0, "generation_mw": 0.0  },
+    { "id": 9, "name": "Bus 9", "type": "Pq",        "voltage_magnitude_pu": 1.000, "voltage_angle_rad": -0.260, "base_kv": 138.0, "load_mw": 29.5, "load_mvar": 16.6 },
+    { "id": 10,"name": "Bus 10","type": "Pq",        "voltage_magnitude_pu": 1.000, "voltage_angle_rad": -0.265, "base_kv": 138.0, "load_mw": 9.0,  "load_mvar": 5.8  },
+    { "id": 11,"name": "Bus 11","type": "Pq",        "voltage_magnitude_pu": 1.000, "voltage_angle_rad": -0.258, "base_kv": 138.0, "load_mw": 3.5,  "load_mvar": 1.8  },
+    { "id": 12,"name": "Bus 12","type": "Pq",        "voltage_magnitude_pu": 1.000, "voltage_angle_rad": -0.272, "base_kv": 138.0, "load_mw": 6.1,  "load_mvar": 1.6  },
+    { "id": 13,"name": "Bus 13","type": "Pq",        "voltage_magnitude_pu": 1.000, "voltage_angle_rad": -0.274, "base_kv": 138.0, "load_mw": 13.5, "load_mvar": 5.8  },
+    { "id": 14,"name": "Bus 14","type": "Pq",        "voltage_magnitude_pu": 1.000, "voltage_angle_rad": -0.288, "base_kv": 138.0, "load_mw": 14.9, "load_mvar": 5.0  }
+  ],
+  "branches": [
+    { "id": 1,  "name": "1-2",  "from_bus": 1,  "to_bus": 2,  "resistance_pu": 0.01938, "reactance_pu": 0.05917, "susceptance_pu": 0.0528, "rating_mva": 200.0 },
+    { "id": 2,  "name": "1-5",  "from_bus": 1,  "to_bus": 5,  "resistance_pu": 0.05403, "reactance_pu": 0.22304, "susceptance_pu": 0.0492, "rating_mva": 150.0 },
+    { "id": 3,  "name": "2-3",  "from_bus": 2,  "to_bus": 3,  "resistance_pu": 0.04699, "reactance_pu": 0.19797, "susceptance_pu": 0.0438, "rating_mva": 150.0 },
+    { "id": 4,  "name": "2-4",  "from_bus": 2,  "to_bus": 4,  "resistance_pu": 0.05811, "reactance_pu": 0.17632, "susceptance_pu": 0.0340, "rating_mva": 100.0 },
+    { "id": 5,  "name": "2-5",  "from_bus": 2,  "to_bus": 5,  "resistance_pu": 0.05695, "reactance_pu": 0.17388, "susceptance_pu": 0.0346, "rating_mva": 100.0 },
+    { "id": 6,  "name": "3-4",  "from_bus": 3,  "to_bus": 4,  "resistance_pu": 0.06701, "reactance_pu": 0.17103, "susceptance_pu": 0.0128, "rating_mva": 100.0 },
+    { "id": 7,  "name": "4-5",  "from_bus": 4,  "to_bus": 5,  "resistance_pu": 0.01335, "reactance_pu": 0.04211, "susceptance_pu": 0.0,    "rating_mva": 100.0 },
+    { "id": 8,  "name": "4-7",  "from_bus": 4,  "to_bus": 7,  "resistance_pu": 0.0,     "reactance_pu": 0.20912, "susceptance_pu": 0.0,    "rating_mva": 100.0, "tap_ratio": 0.978 },
+    { "id": 9,  "name": "4-9",  "from_bus": 4,  "to_bus": 9,  "resistance_pu": 0.0,     "reactance_pu": 0.55618, "susceptance_pu": 0.0,    "rating_mva": 100.0, "tap_ratio": 0.969 },
+    { "id": 10, "name": "5-6",  "from_bus": 5,  "to_bus": 6,  "resistance_pu": 0.0,     "reactance_pu": 0.25202, "susceptance_pu": 0.0,    "rating_mva": 100.0, "tap_ratio": 0.932 },
+    { "id": 11, "name": "6-11", "from_bus": 6,  "to_bus": 11, "resistance_pu": 0.09498, "reactance_pu": 0.19890, "susceptance_pu": 0.0,    "rating_mva": 100.0 },
+    { "id": 12, "name": "6-12", "from_bus": 6,  "to_bus": 12, "resistance_pu": 0.12291, "reactance_pu": 0.25581, "susceptance_pu": 0.0,    "rating_mva": 100.0 },
+    { "id": 13, "name": "6-13", "from_bus": 6,  "to_bus": 13, "resistance_pu": 0.06615, "reactance_pu": 0.13027, "susceptance_pu": 0.0,    "rating_mva": 100.0 },
+    { "id": 14, "name": "7-8",  "from_bus": 7,  "to_bus": 8,  "resistance_pu": 0.0,     "reactance_pu": 0.17615, "susceptance_pu": 0.0,    "rating_mva": 100.0, "tap_ratio": 0.978 },
+    { "id": 15, "name": "7-9",  "from_bus": 7,  "to_bus": 9,  "resistance_pu": 0.0,     "reactance_pu": 0.11001, "susceptance_pu": 0.0,    "rating_mva": 100.0 },
+    { "id": 16, "name": "9-10", "from_bus": 9,  "to_bus": 10, "resistance_pu": 0.03181, "reactance_pu": 0.08450, "susceptance_pu": 0.0,    "rating_mva": 100.0 },
+    { "id": 17, "name": "9-14", "from_bus": 9,  "to_bus": 14, "resistance_pu": 0.12711, "reactance_pu": 0.27038, "susceptance_pu": 0.0,    "rating_mva": 100.0 },
+    { "id": 18, "name": "10-11","from_bus": 10, "to_bus": 11, "resistance_pu": 0.08205, "reactance_pu": 0.19207, "susceptance_pu": 0.0,    "rating_mva": 100.0 },
+    { "id": 19, "name": "12-13","from_bus": 12, "to_bus": 13, "resistance_pu": 0.22092, "reactance_pu": 0.19988, "susceptance_pu": 0.0,    "rating_mva": 100.0 },
+    { "id": 20, "name": "13-14","from_bus": 13, "to_bus": 14, "resistance_pu": 0.17093, "reactance_pu": 0.34802, "susceptance_pu": 0.0,    "rating_mva": 100.0 }
+  ],
+  "generators": [
+    { "id": 1, "name": "G1", "bus_id": 1, "type": "Thermal", "p_max_mw": 332.4, "p_min_mw": 0.0, "p_schedule_mw": 232.4, "voltage_setpoint_pu": 1.06,  "q_max_mvar": 10.0,  "q_min_mvar": -10.0  },
+    { "id": 2, "name": "G2", "bus_id": 2, "type": "Thermal", "p_max_mw": 140.0, "p_min_mw": 0.0, "p_schedule_mw": 40.0,  "voltage_setpoint_pu": 1.045, "q_max_mvar": 50.0,  "q_min_mvar": -40.0  },
+    { "id": 3, "name": "G3", "bus_id": 3, "type": "Thermal", "p_max_mw": 100.0, "p_min_mw": 0.0, "p_schedule_mw": 0.0,   "voltage_setpoint_pu": 1.01,  "q_max_mvar": 40.0,  "q_min_mvar": 0.0    },
+    { "id": 4, "name": "G6", "bus_id": 6, "type": "Thermal", "p_max_mw": 100.0, "p_min_mw": 0.0, "p_schedule_mw": 0.0,   "voltage_setpoint_pu": 1.07,  "q_max_mvar": 24.0,  "q_min_mvar": -6.0   },
+    { "id": 5, "name": "G8", "bus_id": 8, "type": "Thermal", "p_max_mw": 100.0, "p_min_mw": 0.0, "p_schedule_mw": 0.0,   "voltage_setpoint_pu": 1.09,  "q_max_mvar": 24.0,  "q_min_mvar": -6.0   }
+  ],
+  "metadata": {
+    "source": "IEEE 14-Bus Test Case (standard parameters)",
+    "base_mva": 100.0
+  }
+}

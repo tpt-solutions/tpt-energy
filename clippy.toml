@@ -1,0 +1,8 @@
+avoid-breaking-exported-api = false
+disallowed-methods = []
+disallowed-types = []
+doc-valid-idents = ["KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "AC", "DC", "SoC", "DoD", "LCOE", "NPV", "IRR", "MILP", "QP", "PV", "PQ", "RoCoF", "VPP", "DER", "Hz", "kWh", "MWh", "GWh", "kW", "MW", "GW", "kVA", "MVA", "GVA", "kV", "MV", "GV", "kA", "MA"]
+too-many-arguments-threshold = 12
+type-complexity-threshold = 400
+single-char-binding-names-threshold = 6
+missing-docs-in-crate-items = true

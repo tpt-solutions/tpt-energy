@@ -1,0 +1,23 @@
+name: License Audit
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+  schedule:
+    - cron: "0 0 * * 0"
+
+jobs:
+  deny:
+    name: cargo deny
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install cargo-deny
+        uses: EmbarkStudios/cargo-deny-action@v2
+      - run: cargo deny check licenses
+      - run: cargo deny check bans
+      - run: cargo deny check advisories
+      - run: cargo deny check sources

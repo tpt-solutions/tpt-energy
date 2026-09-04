@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+env:
+  RUSTFLAGS: -D warnings
+  CARGO_TERM_COLOR: always
+
+jobs:
+  fmt:
+    name: rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - run: cargo fmt --all -- --check
+
+  clippy:
+    name: clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Run tests
+        run: cargo test --workspace --all-features
+      - name: Run doc tests
+        run: cargo test --workspace --all-features --doc
+
+  coverage:
+    name: coverage
+    runs-on: ubuntu-latest
+    needs: [fmt, clippy, test]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install tarpaulin
+        run: cargo install cargo-tarpaulin
+      - name: Generate coverage
+        run: cargo tarpaulin --workspace --out Xml --all-features
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./cobertura.xml

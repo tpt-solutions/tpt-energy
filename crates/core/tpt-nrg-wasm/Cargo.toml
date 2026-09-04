@@ -1,0 +1,26 @@
+[package]
+name = "tpt-nrg-wasm"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+description = "TPT Energy WebAssembly bindings for browser and edge control"
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+missing_docs = "warn"
+
+[dependencies]
+tpt-nrg-core = { workspace = true }
+tpt-nrg-der = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]

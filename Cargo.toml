@@ -1,0 +1,107 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/core/tpt-nrg-core",
+    "crates/core/tpt-nrg-topology",
+    "crates/core/tpt-nrg-timeseries",
+    "crates/core/tpt-nrg-wasm",
+    "crates/resource/tpt-nrg-solar",
+    "crates/resource/tpt-nrg-wind",
+    "crates/resource/tpt-nrg-hydro",
+    "crates/resource/tpt-nrg-load",
+    "crates/grid/tpt-nrg-powerflow",
+    "crates/grid/tpt-nrg-fault",
+    "crates/grid/tpt-nrg-state-estimation",
+    "crates/grid/tpt-nrg-protection",
+    "crates/storage/tpt-nrg-battery",
+    "crates/storage/tpt-nrg-hydrogen",
+    "crates/storage/tpt-nrg-thermal-storage",
+    "crates/microgrid/tpt-nrg-der",
+    "crates/microgrid/tpt-nrg-islanding",
+    "crates/microgrid/tpt-nrg-vpp",
+    "crates/dispatch/tpt-nrg-unit-commitment",
+    "crates/dispatch/tpt-nrg-economic-dispatch",
+    "crates/dispatch/tpt-nrg-reserve",
+    "crates/economics/tpt-nrg-lcoe",
+    "crates/economics/tpt-nrg-market",
+    "crates/economics/tpt-nrg-carbon",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/tpt-solutions/tpt-energy"
+homepage = "https://github.com/tpt-solutions/tpt-energy"
+authors = ["TPT Solutions <[email protected]>"]
+description = "TPT Energy: power systems, resource modeling, storage, dispatch, and grid economics in Rust"
+
+[workspace.dependencies]
+# Internal workspace crates
+tpt-nrg-core = { path = "crates/core/tpt-nrg-core", version = "0.1.0" }
+tpt-nrg-topology = { path = "crates/core/tpt-nrg-topology", version = "0.1.0" }
+tpt-nrg-timeseries = { path = "crates/core/tpt-nrg-timeseries", version = "0.1.0" }
+
+tpt-nrg-solar = { path = "crates/resource/tpt-nrg-solar", version = "0.1.0" }
+tpt-nrg-wind = { path = "crates/resource/tpt-nrg-wind", version = "0.1.0" }
+tpt-nrg-hydro = { path = "crates/resource/tpt-nrg-hydro", version = "0.1.0" }
+tpt-nrg-load = { path = "crates/resource/tpt-nrg-load", version = "0.1.0" }
+
+tpt-nrg-powerflow = { path = "crates/grid/tpt-nrg-powerflow", version = "0.1.0" }
+tpt-nrg-fault = { path = "crates/grid/tpt-nrg-fault", version = "0.1.0" }
+tpt-nrg-state-estimation = { path = "crates/grid/tpt-nrg-state-estimation", version = "0.1.0" }
+tpt-nrg-protection = { path = "crates/grid/tpt-nrg-protection", version = "0.1.0" }
+
+tpt-nrg-battery = { path = "crates/storage/tpt-nrg-battery", version = "0.1.0" }
+tpt-nrg-hydrogen = { path = "crates/storage/tpt-nrg-hydrogen", version = "0.1.0" }
+tpt-nrg-thermal-storage = { path = "crates/storage/tpt-nrg-thermal-storage", version = "0.1.0" }
+
+tpt-nrg-der = { path = "crates/microgrid/tpt-nrg-der", version = "0.1.0" }
+tpt-nrg-islanding = { path = "crates/microgrid/tpt-nrg-islanding", version = "0.1.0" }
+tpt-nrg-vpp = { path = "crates/microgrid/tpt-nrg-vpp", version = "0.1.0" }
+
+tpt-nrg-unit-commitment = { path = "crates/dispatch/tpt-nrg-unit-commitment", version = "0.1.0" }
+tpt-nrg-economic-dispatch = { path = "crates/dispatch/tpt-nrg-economic-dispatch", version = "0.1.0" }
+tpt-nrg-reserve = { path = "crates/dispatch/tpt-nrg-reserve", version = "0.1.0" }
+
+tpt-nrg-lcoe = { path = "crates/economics/tpt-nrg-lcoe", version = "0.1.0" }
+tpt-nrg-market = { path = "crates/economics/tpt-nrg-market", version = "0.1.0" }
+tpt-nrg-carbon = { path = "crates/economics/tpt-nrg-carbon", version = "0.1.0" }
+
+# External substrate crates (TPT ecosystem)
+#
+# These are intentionally NOT listed in `[workspace.dependencies]` yet because
+# they are not published to crates.io. The tpt-nrg-* crates use self-contained
+# implementations of the relevant algorithms (Newton–Raphson, Weibull PDF,
+# clear-sky models, etc.) and expose a `tpt-substrate` feature that swaps
+# in the upstream implementations when the registry is available. Adding the
+# substrate wiring is tracked in `todo.md` Phase 0 / Phase 8.
+
+# Third-party
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+anyhow = "1.0"
+ndarray = "0.15"
+chrono = { version = "0.4", features = ["serde"] }
+log = "0.4"
+env_logger = "0.11"
+approx = "0.5"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+debug = false
+strip = "symbols"
+
+[profile.bench]
+opt-level = 3
+lto = "thin"
+debug = false
+
+[profile.dev]
+opt-level = 0
+debug = true
+incremental = true
