@@ -1,0 +1,41 @@
+[workspace]
+members = ["."]
+
+[package]
+name = "tpt-nrg-examples"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[dependencies]
+tpt-nrg-core = { path = "../crates/core/tpt-nrg-core", version = "0.1.0" }
+tpt-nrg-powerflow = { path = "../crates/grid/tpt-nrg-powerflow", version = "0.1.0" }
+tpt-nrg-solar = { path = "../crates/resource/tpt-nrg-solar", version = "0.1.0" }
+tpt-nrg-wind = { path = "../crates/resource/tpt-nrg-wind", version = "0.1.0" }
+tpt-nrg-battery = { path = "../crates/storage/tpt-nrg-battery", version = "0.1.0" }
+tpt-nrg-islanding = { path = "../crates/microgrid/tpt-nrg-islanding", version = "0.1.0" }
+tpt-nrg-economic-dispatch = { path = "../crates/dispatch/tpt-nrg-economic-dispatch", version = "0.1.0" }
+chrono = "0.4"
+anyhow = "1.0"
+
+[[bin]]
+name = "ieee-14-bus-powerflow"
+path = "ieee-14-bus-powerflow.rs"
+
+[[bin]]
+name = "solar-farm-layout"
+path = "solar-farm-layout.rs"
+
+[[bin]]
+name = "wind-farm-wake"
+path = "wind-farm-wake.rs"
+
+[[bin]]
+name = "microgrid-islanding"
+path = "microgrid-islanding.rs"
+
+[[bin]]
+name = "battery-arbitrage"
+path = "battery-arbitrage.rs"

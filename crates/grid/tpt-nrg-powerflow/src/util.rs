@@ -87,9 +87,21 @@ pub(crate) fn flat_start_voltages(system: &EnergySystem) -> (Vec<f64>, Vec<f64>)
 }
 
 /// Compute branch flows for the solved voltage profile.
+///
+/// The flow at the "from" end of a branch is computed from the branch's
+/// series admittance and the **transformed** voltage at each end:
+///
+/// ```text
+/// I_from = (V_from / t) · y_series · e^{-jθ} − V_from · j·(B/2)
+/// S_from = V_from · I_from^*
+/// ```
+///
+/// where `t = tap_ratio * e^{j·phase_shift}` is the complex turns ratio.
+/// This formulation is valid for both transmission lines (`t = 1`) and
+/// off-nominal transformers.
 pub(crate) fn compute_branch_flows(
     system: &EnergySystem,
-    y: &AdmittanceMatrix,
+    _y: &AdmittanceMatrix,
     v: &[f64],
     theta: &[f64],
 ) -> Vec<crate::result::BranchFlow> {
@@ -99,76 +111,83 @@ pub(crate) fn compute_branch_flows(
     for br in &system.branches {
         let i = match map.get(br.from_bus).and_then(|x| *x) {
             Some(v) => v,
-            None => {
-                flows.push(crate::result::BranchFlow {
-                    id: br.id,
-                    p_from_mw: 0.0,
-                    q_from_mvar: 0.0,
-                    p_to_mw: 0.0,
-                    q_to_mvar: 0.0,
-                    loading_fraction: 0.0,
-                });
-                continue;
-            }
+            None => continue,
         };
         let j = match map.get(br.to_bus).and_then(|x| *x) {
             Some(v) => v,
-            None => {
-                flows.push(crate::result::BranchFlow {
-                    id: br.id,
-                    p_from_mw: 0.0,
-                    q_from_mvar: 0.0,
-                    p_to_mw: 0.0,
-                    q_to_mvar: 0.0,
-                    loading_fraction: 0.0,
-                });
-                continue;
-            }
+            None => continue,
         };
+        let r = br.resistance_pu;
+        let x = br.reactance_pu;
+        let denom = r * r + x * x;
+        if denom == 0.0 {
+            flows.push(crate::result::BranchFlow {
+                id: br.id,
+                p_from_mw: 0.0,
+                q_from_mvar: 0.0,
+                p_to_mw: 0.0,
+                q_to_mvar: 0.0,
+                loading_fraction: 0.0,
+            });
+            continue;
+        }
+        let g_series = r / denom;
+        let b_series = -x / denom;
+        // B/2 at each end (split line charging)
+        let bc_half = br.susceptance_pu * 0.5;
+        let tap = br.tap_ratio;
+        let shift = br.phase_shift_rad;
+
         let vi = v[i];
-        let vj = v[j];
         let ti = theta[i];
+        let vj = v[j];
         let tj = theta[j];
 
-        // Use the off-diagonal Y entry to get the line admittance.
-        // For a simple line, y_ij = -y_series (and y_ji is the conjugate for
-        // symmetric lines). For off-nominal taps the off-diagonals are
-        // -y/t or -y/t*, but for line flows we use the standard formula:
-        //   S_from = V_i * (Y_ii V_i + Y_ij V_j)^*,  S_to = V_j * (Y_ji V_i + Y_jj V_j)^*.
-        let g_ii = y.g_ij(i, i);
-        let b_ii = y.b_ij(i, i);
-        let g_ij = y.g_ij(i, j);
-        let b_ij = y.b_ij(i, j);
-        let g_ji = y.g_ij(j, i);
-        let b_ji = y.b_ij(j, i);
-        let g_jj = y.g_ij(j, j);
-        let b_jj = y.b_ij(j, j);
+        // V_from_internal = V_i / t (t complex: t = tap * e^{j·shift})
+        // 1 / (tap e^{j shift}) = (1/tap) e^{-j shift}
+        let v_int_mag = vi / tap;
+        let v_int_ang = ti - shift;
+        let v_int_re = v_int_mag * v_int_ang.cos();
+        let v_int_im = v_int_mag * v_int_ang.sin();
 
-        // I_i = (G_ii + jB_ii) V_i e^{jθ_i} + (G_ij + jB_ij) V_j e^{jθ_j}
-        let (sx_re, sx_im) = mul(
-            g_ii,
-            b_ii,
-            vi * ti.cos(),
-            vi * ti.sin(),
-        );
-        let (sx_re2, sx_im2) = mul(g_ij, b_ij, vj * tj.cos(), vj * tj.sin());
-        let i_from_re = sx_re + sx_re2;
-        let i_from_im = sx_im + sx_im2;
-        // S_from = V_i e^{jθ_i} * (I_from)^*  -> take conjugate
-        let v_from_re = vi * ti.cos();
-        let v_from_im = vi * ti.sin();
-        let s_from_re = v_from_re * i_from_re + v_from_im * i_from_im;
-        let s_from_im = -v_from_re * i_from_im + v_from_im * i_from_re;
-
-        // I_j similarly
-        let (sy_re, sy_im) = mul(g_ji, b_ji, vi * ti.cos(), vi * ti.sin());
-        let (sy_re2, sy_im2) = mul(g_jj, b_jj, vj * tj.cos(), vj * tj.sin());
-        let i_to_re = sy_re + sy_re2;
-        let i_to_im = sy_im + sy_im2;
+        // V_to = V_j e^{j θ_j}
         let v_to_re = vj * tj.cos();
         let v_to_im = vj * tj.sin();
-        let s_to_re = v_to_re * i_to_re + v_to_im * i_to_im;
-        let s_to_im = -v_to_re * i_to_im + v_to_im * i_to_re;
+
+        // I_from_internal = y_series · (V_from_internal − V_to)
+        let dv_re = v_int_re - v_to_re;
+        let dv_im = v_int_im - v_to_im;
+        // (g + j b)(dv_re + j dv_im) = (g·dv_re - b·dv_im) + j(g·dv_im + b·dv_re)
+        let i_int_re = g_series * dv_re - b_series * dv_im;
+        let i_int_im = g_series * dv_im + b_series * dv_re;
+        // I_from (on the "from" bus side) = I_from_internal / t*
+        //   = I_int · e^{+j shift} / tap
+        let i_from_re = (i_int_re * shift.cos() - i_int_im * shift.sin()) / tap;
+        let i_from_im = (i_int_re * shift.sin() + i_int_im * shift.cos()) / tap;
+        // Shunt current at "from" end: j·(B/2) · V_i
+        let ish_re = -bc_half * vi * ti.sin();
+        let ish_im = bc_half * vi * ti.cos();
+        let i_from_tot_re = i_from_re + ish_re;
+        let i_from_tot_im = i_from_im + ish_im;
+        // S_from = V_i · I_from*
+        let v_from_re = vi * ti.cos();
+        let v_from_im = vi * ti.sin();
+        let s_from_re = v_from_re * i_from_tot_re + v_from_im * i_from_tot_im;
+        let s_from_im = -v_from_re * i_from_tot_im + v_from_im * i_from_tot_re;
+
+        // I_to_internal = -y_series · (V_from_internal − V_to) = -I_int
+        // I_to (on the "to" bus side) = I_to_internal
+        let i_to_re = -i_int_re;
+        let i_to_im = -i_int_im;
+        // Shunt current at "to" end: j·(B/2) · V_j
+        let ish2_re = -bc_half * vj * tj.sin();
+        let ish2_im = bc_half * vj * tj.cos();
+        let i_to_tot_re = i_to_re + ish2_re;
+        let i_to_tot_im = i_to_im + ish2_im;
+        let v_to_re_full = v_to_re;
+        let v_to_im_full = v_to_im;
+        let s_to_re = v_to_re_full * i_to_tot_re + v_to_im_full * i_to_tot_im;
+        let s_to_im = -v_to_re_full * i_to_tot_im + v_to_im_full * i_to_tot_re;
 
         let p_from = s_from_re * base;
         let q_from = s_from_im * base;
@@ -192,9 +211,4 @@ pub(crate) fn compute_branch_flows(
         });
     }
     flows
-}
-
-/// Multiply complex numbers: `(a+jb) * (c+jd) = (ac - bd) + j(ad + bc)`.
-fn mul(a: f64, b: f64, c: f64, d: f64) -> (f64, f64) {
-    (a * c - b * d, a * d + b * c)
 }

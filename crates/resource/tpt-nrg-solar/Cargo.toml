@@ -7,7 +7,7 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 authors.workspace = true
-description = "TPT Energy solar position and PV output"
+description = "TPT Energy solar position (SPA-equivalent) and PV output"
 
 [lints.rust]
 unsafe_code = "forbid"
@@ -19,6 +19,7 @@ missing_panics_doc = "warn"
 
 [dependencies]
 tpt-nrg-core = { workspace = true }
+chrono = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
 log = { workspace = true }

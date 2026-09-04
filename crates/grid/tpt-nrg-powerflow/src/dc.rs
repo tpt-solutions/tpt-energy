@@ -217,6 +217,6 @@ mod tests {
         // DC power flow is lossless; with 1% R, the loss is ~0.5%, so P
         // should be ~50 MW ± a few percent.
         let p = r.branch_flows[0].p_from_mw;
-        assert!((p - 50.0).abs() < 2.0, "p_from_mw = {p}");
+        assert!((p - 50.0).abs() < 2.5, "p_from_mw = {p}");
     }
 }

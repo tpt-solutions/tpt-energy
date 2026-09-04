@@ -18,6 +18,7 @@ missing_docs = "warn"
 
 [dependencies]
 tpt-nrg-core = { workspace = true }
+tpt-nrg-powerflow = { workspace = true }
 tpt-nrg-der = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

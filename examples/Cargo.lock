@@ -12,13 +12,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "approx"
-version = "0.5.1"
+name = "anyhow"
+version = "1.0.104"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cab112f0a86d568ea0e627cc1d6be74a1e9cd55214684db5561995f6dad897c6"
-dependencies = [
- "num-traits",
-]
+checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
 
 [[package]]
 name = "autocfg"
@@ -34,9 +31,9 @@ checksum = "72f5acc6cb2ba439de613abc23857ec3d78374d8ed5ac84e9d11336e87da8649"
 
 [[package]]
 name = "cc"
-version = "1.4.4"
+version = "1.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0ad534f4357a5264cce5019c989cf66a4f0dc4e0d1b1d15f8aacec0ff7360273"
+checksum = "005ec2760ca554fae18df7a11195552ec576cd665632a881bc011d5bb2fd4d80"
 dependencies = [
  "find-msvc-tools",
  "shlex",
@@ -70,9 +67,9 @@ checksum = "773648b94d0e5d620f64f280777445740e61fe701025087ec8b57f45c791888b"
 
 [[package]]
 name = "find-msvc-tools"
-version = "0.1.11"
+version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d45db016d36b838f563236e9193d0ee6ce38f3f68b6c94e914b4929c96bbb890"
+checksum = "3e0f1c7c3a72c66fd80abe965175f7523475c0489a87d3ff9d6e8c87d87a9d2d"
 
 [[package]]
 name = "futures-core"
@@ -303,18 +300,6 @@ dependencies = [
 name = "tpt-nrg-battery"
 version = "0.1.0"
 dependencies = [
- "approx",
- "log",
- "serde",
- "thiserror",
- "tpt-nrg-core",
-]
-
-[[package]]
-name = "tpt-nrg-carbon"
-version = "0.1.0"
-dependencies = [
- "approx",
  "log",
  "serde",
  "thiserror",
@@ -325,29 +310,16 @@ dependencies = [
 name = "tpt-nrg-core"
 version = "0.1.0"
 dependencies = [
- "approx",
  "log",
  "serde",
  "serde_json",
  "thiserror",
-]
-
-[[package]]
-name = "tpt-nrg-der"
-version = "0.1.0"
-dependencies = [
- "approx",
- "log",
- "serde",
- "thiserror",
- "tpt-nrg-core",
 ]
 
 [[package]]
 name = "tpt-nrg-economic-dispatch"
 version = "0.1.0"
 dependencies = [
- "approx",
  "log",
  "serde",
  "thiserror",
@@ -356,214 +328,66 @@ dependencies = [
 ]
 
 [[package]]
-name = "tpt-nrg-fault"
+name = "tpt-nrg-examples"
 version = "0.1.0"
 dependencies = [
- "approx",
- "log",
- "serde",
- "thiserror",
+ "anyhow",
+ "chrono",
+ "tpt-nrg-battery",
  "tpt-nrg-core",
- "tpt-nrg-topology",
-]
-
-[[package]]
-name = "tpt-nrg-hydro"
-version = "0.1.0"
-dependencies = [
- "approx",
- "log",
- "serde",
- "thiserror",
- "tpt-nrg-core",
-]
-
-[[package]]
-name = "tpt-nrg-hydrogen"
-version = "0.1.0"
-dependencies = [
- "approx",
- "log",
- "serde",
- "thiserror",
- "tpt-nrg-core",
+ "tpt-nrg-economic-dispatch",
+ "tpt-nrg-islanding",
+ "tpt-nrg-powerflow",
+ "tpt-nrg-solar",
+ "tpt-nrg-wind",
 ]
 
 [[package]]
 name = "tpt-nrg-islanding"
 version = "0.1.0"
 dependencies = [
- "approx",
  "log",
  "serde",
  "thiserror",
  "tpt-nrg-battery",
  "tpt-nrg-core",
-]
-
-[[package]]
-name = "tpt-nrg-lcoe"
-version = "0.1.0"
-dependencies = [
- "approx",
- "log",
- "serde",
- "thiserror",
-]
-
-[[package]]
-name = "tpt-nrg-load"
-version = "0.1.0"
-dependencies = [
- "approx",
- "log",
- "serde",
- "thiserror",
- "tpt-nrg-core",
- "tpt-nrg-timeseries",
-]
-
-[[package]]
-name = "tpt-nrg-market"
-version = "0.1.0"
-dependencies = [
- "approx",
- "chrono",
- "log",
- "serde",
- "thiserror",
- "tpt-nrg-timeseries",
 ]
 
 [[package]]
 name = "tpt-nrg-powerflow"
 version = "0.1.0"
 dependencies = [
- "approx",
  "log",
  "serde",
  "thiserror",
  "tpt-nrg-core",
  "tpt-nrg-topology",
-]
-
-[[package]]
-name = "tpt-nrg-protection"
-version = "0.1.0"
-dependencies = [
- "approx",
- "log",
- "serde",
- "thiserror",
- "tpt-nrg-core",
-]
-
-[[package]]
-name = "tpt-nrg-reserve"
-version = "0.1.0"
-dependencies = [
- "approx",
- "log",
- "serde",
- "thiserror",
- "tpt-nrg-core",
 ]
 
 [[package]]
 name = "tpt-nrg-solar"
 version = "0.1.0"
 dependencies = [
- "approx",
  "chrono",
  "log",
  "serde",
  "thiserror",
  "tpt-nrg-core",
-]
-
-[[package]]
-name = "tpt-nrg-state-estimation"
-version = "0.1.0"
-dependencies = [
- "approx",
- "log",
- "serde",
- "thiserror",
- "tpt-nrg-core",
- "tpt-nrg-topology",
-]
-
-[[package]]
-name = "tpt-nrg-thermal-storage"
-version = "0.1.0"
-dependencies = [
- "approx",
- "log",
- "serde",
- "thiserror",
- "tpt-nrg-core",
-]
-
-[[package]]
-name = "tpt-nrg-timeseries"
-version = "0.1.0"
-dependencies = [
- "approx",
- "chrono",
- "serde",
- "thiserror",
 ]
 
 [[package]]
 name = "tpt-nrg-topology"
 version = "0.1.0"
 dependencies = [
- "approx",
  "log",
  "thiserror",
  "tpt-nrg-core",
-]
-
-[[package]]
-name = "tpt-nrg-unit-commitment"
-version = "0.1.0"
-dependencies = [
- "approx",
- "log",
- "serde",
- "thiserror",
- "tpt-nrg-core",
-]
-
-[[package]]
-name = "tpt-nrg-vpp"
-version = "0.1.0"
-dependencies = [
- "approx",
- "log",
- "serde",
- "thiserror",
- "tpt-nrg-battery",
- "tpt-nrg-core",
-]
-
-[[package]]
-name = "tpt-nrg-wasm"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
- "thiserror",
- "tpt-nrg-core",
- "tpt-nrg-der",
- "tpt-nrg-powerflow",
 ]
 
 [[package]]
 name = "tpt-nrg-wind"
 version = "0.1.0"
 dependencies = [
- "approx",
  "log",
  "serde",
  "thiserror",
