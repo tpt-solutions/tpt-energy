@@ -1,0 +1,8 @@
+{
+  "description": "24-hour unit commitment on 3 thermal units with simple merit-order dispatch. G1 (100 MW cap, $20/MWh), G2 (80 MW cap, $30/MWh), G3 (50 MW cap, $50/MWh). Min stable output 20 MW. Load follows a typical daily curve (low overnight, peak evening).",
+  "load_profile_mw": [60, 55, 50, 50, 55, 65, 85, 110, 130, 140, 145, 150, 155, 150, 145, 140, 145, 155, 165, 170, 160, 130, 100, 80],
+  "expected_total_cost_dollar": 70120.0,
+  "tolerance_dollar": 50.0,
+  "expected_commitment_per_unit_per_hour": null,
+  "description_notes": "G1 alone (up to 100 MW) covers all loads ≤ 100 MW. Above 100 MW, G2 (next cheapest) takes up to 80 MW, then G3 covers the remainder. Since no load exceeds 230 MW, all three units are committed for all hours that load > 120 MW."
+}

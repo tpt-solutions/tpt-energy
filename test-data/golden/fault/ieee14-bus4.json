@@ -1,0 +1,25 @@
+{
+  "case": "ieee14",
+  "description": "IEEE 14-bus fault currents at bus 4 using radial-network Z1 approximation with default Z2=Z1, Z0=3*Z1 assumptions. Reference values produced by tpt-nrg-fault; the radial approximation is conservative (slightly underestimates Z1 for meshed systems).",
+  "base_mva": 100.0,
+  "fault_bus": 4,
+  "base_kv_at_fault": 138.0,
+  "faults": {
+    "three_phase": {
+      "i_fault_pu": 4.034,
+      "tolerance_pu": 0.2
+    },
+    "line_to_line": {
+      "i_fault_pu": 3.493,
+      "tolerance_pu": 0.2
+    },
+    "line_to_ground": {
+      "i_fault_pu": 2.420,
+      "tolerance_pu": 0.2
+    },
+    "double_line_to_ground": {
+      "i_fault_pu": 1.729,
+      "tolerance_pu": 0.15
+    }
+  }
+}

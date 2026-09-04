@@ -1,0 +1,13 @@
+{
+  "description": "5-generator economic dispatch with flat marginal costs. Expected dispatch from merit order: G1 (cheapest, 100 MW) full, G2 (150 MW) full, G3 (50 MW) marginal.",
+  "generators": [
+    { "name": "G1", "p_max_mw": 100.0, "p_min_mw": 20.0, "mc_dollar_per_mwh": 20.0 },
+    { "name": "G2", "p_max_mw": 150.0, "p_min_mw": 30.0, "mc_dollar_per_mwh": 30.0 },
+    { "name": "G3", "p_max_mw": 50.0,  "p_min_mw": 10.0, "mc_dollar_per_mwh": 50.0 }
+  ],
+  "test_loads_mw": [
+    { "load_mw": 200.0, "expected_outputs_mw": [100.0, 100.0, 0.0],  "expected_lambda": 30.0, "tolerance_mw": 0.1 },
+    { "load_mw": 280.0, "expected_outputs_mw": [100.0, 150.0, 30.0], "expected_lambda": 50.0, "tolerance_mw": 0.1 },
+    { "load_mw":  60.0, "expected_outputs_mw": [ 60.0,   0.0, 0.0], "expected_lambda": 20.0, "tolerance_mw": 0.1 }
+  ]
+}

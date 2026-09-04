@@ -1,0 +1,34 @@
+{
+  "downstream_samples_mps": [
+    {
+      "deficit_factor": 0.3714420741390887,
+      "distance_d_m": 80.0,
+      "v_downstream_mps": 6.285579258609113
+    },
+    {
+      "deficit_factor": 0.27430914368795356,
+      "distance_d_m": 160.0,
+      "v_downstream_mps": 7.256908563120464
+    },
+    {
+      "deficit_factor": 0.17084380241115016,
+      "distance_d_m": 320.0,
+      "v_downstream_mps": 8.291561975888499
+    },
+    {
+      "deficit_factor": 0.0863749435344644,
+      "distance_d_m": 640.0,
+      "v_downstream_mps": 9.136250564655356
+    },
+    {
+      "deficit_factor": 0.03522238430254565,
+      "distance_d_m": 1280.0,
+      "v_downstream_mps": 9.647776156974544
+    }
+  ],
+  "rotor_diameter_m": 80.0,
+  "thrust_coefficient": 0.8,
+  "tolerance_abs": 1e-6,
+  "upstream_wind_speed_mps": 10.0,
+  "wake_decay_k": 0.075
+}

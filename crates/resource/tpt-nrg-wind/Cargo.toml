@@ -30,3 +30,4 @@ substrate = ["dep:tpt-math-prob-dist", "dep:tpt-math-prob-core"]
 
 [dev-dependencies]
 approx = { workspace = true }
+serde_json = { workspace = true }

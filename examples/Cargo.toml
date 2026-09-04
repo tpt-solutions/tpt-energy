@@ -17,6 +17,7 @@ tpt-nrg-wind = { path = "../crates/resource/tpt-nrg-wind", version = "0.1.0" }
 tpt-nrg-battery = { path = "../crates/storage/tpt-nrg-battery", version = "0.1.0" }
 tpt-nrg-islanding = { path = "../crates/microgrid/tpt-nrg-islanding", version = "0.1.0" }
 tpt-nrg-economic-dispatch = { path = "../crates/dispatch/tpt-nrg-economic-dispatch", version = "0.1.0" }
+tpt-nrg-fault = { path = "../crates/grid/tpt-nrg-fault", version = "0.1.0" }
 chrono = "0.4"
 anyhow = "1.0"
 serde_json = "1.0"
@@ -24,6 +25,18 @@ serde_json = "1.0"
 [[bin]]
 name = "generate-ieee-goldens"
 path = "generate-ieee-goldens.rs"
+
+[[bin]]
+name = "generate-solar-goldens"
+path = "generate-solar-goldens.rs"
+
+[[bin]]
+name = "generate-wind-goldens"
+path = "generate-wind-goldens.rs"
+
+[[bin]]
+name = "debug-fault"
+path = "debug-fault.rs"
 
 [[bin]]
 name = "ieee-14-bus-powerflow"
@@ -44,4 +57,5 @@ path = "microgrid-islanding.rs"
 [[bin]]
 name = "battery-arbitrage"
 path = "battery-arbitrage.rs"
+
 

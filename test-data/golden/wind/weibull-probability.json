@@ -1,0 +1,88 @@
+{
+  "farm_two_turbines_5d_spacing": {
+    "effective_wind_speeds_mps": [
+      10.0,
+      8.595205117995041
+    ],
+    "tolerance_abs": 1e-6,
+    "upstream_wind_speed_mps": 10.0
+  },
+  "jensen_wake_deficit": {
+    "downstream_samples_mps": [
+      {
+        "deficit_factor": 0.3714420741390887,
+        "distance_d_m": 80.0,
+        "v_downstream_mps": 6.285579258609113
+      },
+      {
+        "deficit_factor": 0.27430914368795356,
+        "distance_d_m": 160.0,
+        "v_downstream_mps": 7.256908563120464
+      },
+      {
+        "deficit_factor": 0.17084380241115016,
+        "distance_d_m": 320.0,
+        "v_downstream_mps": 8.291561975888499
+      },
+      {
+        "deficit_factor": 0.0863749435344644,
+        "distance_d_m": 640.0,
+        "v_downstream_mps": 9.136250564655356
+      },
+      {
+        "deficit_factor": 0.03522238430254565,
+        "distance_d_m": 1280.0,
+        "v_downstream_mps": 9.647776156974544
+      }
+    ],
+    "rotor_diameter_m": 80.0,
+    "thrust_coefficient": 0.8,
+    "tolerance_abs": 1e-6,
+    "upstream_wind_speed_mps": 10.0,
+    "wake_decay_k": 0.075
+  },
+  "weibull_probability": {
+    "integral_0_to_25": 0.9999949864461325,
+    "samples_mps": [
+      {
+        "pdf": 0.0,
+        "v_mps": 0.0
+      },
+      {
+        "pdf": 0.07523350590185508,
+        "v_mps": 2.0
+      },
+      {
+        "pdf": 0.11778323107832753,
+        "v_mps": 4.0
+      },
+      {
+        "pdf": 0.11746586175429655,
+        "v_mps": 6.0
+      },
+      {
+        "pdf": 0.08844680113321256,
+        "v_mps": 8.0
+      },
+      {
+        "pdf": 0.05302963604288142,
+        "v_mps": 10.0
+      },
+      {
+        "pdf": 0.02592514380377572,
+        "v_mps": 12.0
+      },
+      {
+        "pdf": 0.010466079364990959,
+        "v_mps": 14.0
+      },
+      {
+        "pdf": 0.003515497627375054,
+        "v_mps": 16.0
+      }
+    ],
+    "scale_c_mps": 7.0,
+    "shape_k": 2.0,
+    "tolerance_abs": 1e-12
+  }
+}

@@ -35,3 +35,5 @@ substrate = [
 
 [dev-dependencies]
 approx = { workspace = true }
+tpt-nrg-economic-dispatch = { workspace = true }
+serde_json = { workspace = true }

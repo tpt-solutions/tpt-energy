@@ -30,3 +30,5 @@ substrate = ["dep:tpt-sci-astro"]
 
 [dev-dependencies]
 approx = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }

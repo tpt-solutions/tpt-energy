@@ -1,0 +1,14 @@
+{
+  "scenario": "10 MW / 10 MWh LFP battery cycled at 1C, 90% round-trip efficiency, no degradation. Verifies the SoC trajectory and stored-vs-delivered energy accounting.",
+  "energy_capacity_mwh": 10.0,
+  "power_rating_mw": 10.0,
+  "round_trip_efficiency": 0.9,
+  "min_soc": 0.1,
+  "initial_soc": 0.5,
+  "steps": [
+    { "op": "discharge", "power_mw": 3.9, "duration_h": 1.0, "expected_out_mwh": 3.9, "expected_soc_after": 0.11, "tolerance": 1e-3 },
+    { "op": "charge",    "power_mw": 4.0, "duration_h": 1.0, "expected_stored_mwh": 3.7947, "expected_soc_after": 0.4895, "tolerance": 1e-3 },
+    { "op": "discharge", "power_mw": 7.0, "duration_h": 0.4, "expected_out_mwh": 2.8, "expected_soc_after": 0.2095, "tolerance": 1e-3 },
+    { "op": "charge",    "power_mw": 7.0, "duration_h": 0.5, "expected_stored_mwh": 3.3204, "expected_soc_after": 0.5415, "tolerance": 1e-3 }
+  ]
+}

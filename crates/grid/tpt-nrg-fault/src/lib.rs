@@ -429,9 +429,10 @@ mod tests {
     /// (per-phase RMS, pu) are:
     ///
     /// - 3φ:  |If| = 1.0 / 0.4 = 2.5 pu
-    /// - L-L: |If| = √3 · 0.5 / 0.8 ≈ 1.083 pu
-    /// - SLG: |If| = 3 · 0.5 / 0.9 ≈ 1.667 pu
-    /// - DLG: |If| = 3 · |I0| ≈ 3 · 0.625 = 1.875 pu
+    /// - L-L: |If| = √3 / (Z1 + Z2) = √3 / 0.8 ≈ 2.165 pu
+    /// - SLG: |If| = 3.0 / (Z1 + Z2 + Z0) = 3 / 0.9 ≈ 3.333 pu
+    /// - DLG: |If| = 3 · |I0| with I0 = I1 · Z2 / (Z2 + Z0) and
+    ///         I1 = 1 / (Z1 + Z2·Z0/(Z2+Z0))
     ///
     /// (Reference: Glover, Sarma & Overbye, "Power System Analysis and
     /// Design", 5th ed., Example 7.5.)
@@ -448,10 +449,10 @@ mod tests {
         assert!((r3.i_fault_pu - 2.5).abs() < 1e-9);
 
         let rll = a.fault_from_sequence(2, FaultType::LineToLine, net);
-        assert!((rll.i_fault_pu - 1.0830127).abs() < 1e-5);
+        assert!((rll.i_fault_pu - (3.0_f64).sqrt() / (z1 + z2)).abs() < 1e-5);
 
         let rslg = a.fault_from_sequence(2, FaultType::LineToGround, net);
-        assert!((rslg.i_fault_pu - 1.6666667).abs() < 1e-5);
+        assert!((rslg.i_fault_pu - 3.0 / (z1 + z2 + z0)).abs() < 1e-5);
 
         let rdlg = a.fault_from_sequence(2, FaultType::DoubleLineToGround, net);
         // I0 = -I1 · Z2 / (Z2 + Z0) = -0.5·0.4/0.5 = -0.4
@@ -493,5 +494,4 @@ mod tests {
             );
         }
     }
-}
 }

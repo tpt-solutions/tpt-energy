@@ -337,10 +337,22 @@ dependencies = [
  "tpt-nrg-battery",
  "tpt-nrg-core",
  "tpt-nrg-economic-dispatch",
+ "tpt-nrg-fault",
  "tpt-nrg-islanding",
  "tpt-nrg-powerflow",
  "tpt-nrg-solar",
  "tpt-nrg-wind",
+]
+
+[[package]]
+name = "tpt-nrg-fault"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "serde",
+ "thiserror",
+ "tpt-nrg-core",
+ "tpt-nrg-topology",
 ]
 
 [[package]]

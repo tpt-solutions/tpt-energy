@@ -1,0 +1,64 @@
+{
+  "description": "Solar-position reference values for the tpt-nrg-solar low-precision algorithm (Meeus/NOAA-style). Stable to <0.01° within the algorithm's stated accuracy.",
+  "samples": [
+    {
+      "air_mass": 1.162062753800336,
+      "altitude_deg": 59.32638681435981,
+      "azimuth_deg": 150.08068237532433,
+      "declination_deg": 23.435092474487785,
+      "hour_angle_deg": -16.10564125903845,
+      "timestamp": "2026-06-21T11:00:00Z",
+      "zenith_deg": 30.673613185640193
+    },
+    {
+      "air_mass": 1.1327397650018498,
+      "altitude_deg": 61.93106582177116,
+      "azimuth_deg": 177.8400005477336,
+      "declination_deg": 23.435055413241297,
+      "hour_angle_deg": -1.107860164816552,
+      "timestamp": "2026-06-21T12:00:00Z",
+      "zenith_deg": 28.068934178228837
+    },
+    {
+      "air_mass": 1.1544079187323557,
+      "altitude_deg": 59.973975375019016,
+      "azimuth_deg": 206.1061004876237,
+      "declination_deg": 23.435006392120293,
+      "hour_angle_deg": 13.889921859421408,
+      "timestamp": "2026-06-21T13:00:00Z",
+      "zenith_deg": 30.026024624980984
+    },
+    {
+      "air_mass": 3.7976365391845595,
+      "altitude_deg": 15.12458311836394,
+      "azimuth_deg": 179.42499004024114,
+      "declination_deg": -23.434519858652653,
+      "hour_angle_deg": -0.6051697781105503,
+      "timestamp": "2026-12-21T12:00:00Z",
+      "zenith_deg": 74.87541688163606
+    },
+    {
+      "air_mass": 1.6063018087970085,
+      "altitude_deg": 38.44942670847922,
+      "azimuth_deg": 177.4177200377935,
+      "declination_deg": -0.043446408728816444,
+      "hour_angle_deg": -2.022662666584756,
+      "timestamp": "2026-03-20T12:00:00Z",
+      "zenith_deg": 51.55057329152078
+    }
+  ],
+  "site": {
+    "altitude_m": 25.0,
+    "latitude_deg": 51.5,
+    "longitude_deg": -0.45,
+    "name": "London (Heathrow)",
+    "timezone_offset_hours": 0.0
+  },
+  "tolerance": {
+    "air_mass_abs": 0.01,
+    "altitude_deg": 0.05,
+    "azimuth_deg": 0.5,
+    "declination_deg": 0.05,
+    "zenith_deg": 0.05
+  }
+}
