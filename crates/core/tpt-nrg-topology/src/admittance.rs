@@ -238,8 +238,10 @@ mod tests {
         sys.add_bus(Bus::new(1, "B1", BusType::Slack)).unwrap();
         sys.add_bus(Bus::new(2, "B2", BusType::Pq)).unwrap();
         sys.add_bus(Bus::new(3, "B3", BusType::Pq)).unwrap();
-        sys.add_branch(Branch::new(1, "L12", 1, 2, 0.01, 0.05)).unwrap();
-        sys.add_branch(Branch::new(2, "L23", 2, 3, 0.02, 0.10)).unwrap();
+        sys.add_branch(Branch::new(1, "L12", 1, 2, 0.01, 0.05))
+            .unwrap();
+        sys.add_branch(Branch::new(2, "L23", 2, 3, 0.02, 0.10))
+            .unwrap();
         sys
     }
 
@@ -336,7 +338,8 @@ mod tests {
         let mut sys = EnergySystem::new("t", "T", 100.0, 60.0);
         sys.add_bus(Bus::new(10, "B10", BusType::Slack)).unwrap();
         sys.add_bus(Bus::new(20, "B20", BusType::Pq)).unwrap();
-        sys.add_branch(Branch::new(1, "L", 10, 20, 0.01, 0.05)).unwrap();
+        sys.add_branch(Branch::new(1, "L", 10, 20, 0.01, 0.05))
+            .unwrap();
         let y = AdmittanceMatrixBuilder::new(&sys).build();
         assert!((y.g_ij(0, 1) - y.g_ij(1, 0)).abs() < 1e-12);
         assert!(

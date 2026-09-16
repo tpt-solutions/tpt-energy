@@ -1,4 +1,4 @@
-﻿//! # tpt-nrg-battery
+//! # tpt-nrg-battery
 //!
 //! Battery storage with state-of-charge tracking, round-trip efficiency,
 //! and capacity-fade degradation model.
@@ -157,11 +157,7 @@ impl BatteryStorage {
 
     /// Charge the battery for `power_mw` over `duration_h` hours. Returns
     /// the actual energy delivered to the battery (after losses).
-    pub fn charge(
-        &mut self,
-        power_mw: f64,
-        duration_h: f64,
-    ) -> BatteryResult<f64> {
+    pub fn charge(&mut self, power_mw: f64, duration_h: f64) -> BatteryResult<f64> {
         if duration_h < 0.0 {
             return Err(BatteryError::InvalidInput {
                 reason: format!("duration_h must be non-negative, got {duration_h}"),
@@ -188,11 +184,7 @@ impl BatteryStorage {
 
     /// Discharge the battery for `power_mw` over `duration_h` hours.
     /// Returns the actual energy delivered to the grid.
-    pub fn discharge(
-        &mut self,
-        power_mw: f64,
-        duration_h: f64,
-    ) -> BatteryResult<f64> {
+    pub fn discharge(&mut self, power_mw: f64, duration_h: f64) -> BatteryResult<f64> {
         if duration_h < 0.0 {
             return Err(BatteryError::InvalidInput {
                 reason: format!("duration_h must be non-negative, got {duration_h}"),
@@ -222,8 +214,7 @@ impl BatteryStorage {
     pub fn capacity_factor(&self) -> f64 {
         match &self.degradation {
             Some(d) => {
-                let cycles = self.cumulative_throughput_mwh
-                    / (self.energy_capacity_mwh * 0.8);
+                let cycles = self.cumulative_throughput_mwh / (self.energy_capacity_mwh * 0.8);
                 let fade = d.calculate_degradation(cycles, self.age_years, 25.0);
                 (1.0 - fade).max(0.5)
             }

@@ -65,46 +65,16 @@ impl WindModel {
     }
 
     /// Mean power of a Weibull distribution with given turbine power curve.
+    ///
+    /// Integrated via 32-point Gauss-Legendre quadrature on `[0, 4·c]`.
     #[must_use]
-    pub fn weibull_mean_power(
-        &self,
-        shape_k: f64,
-        scale_c: f64,
-        turbine: &WindTurbine,
-    ) -> f64 {
-        // Trapezoidal integration on [0, 4·c].
-        let n = 400;
-        let upper = 4.0 * scale_c;
-        let dv = upper / n as f64;
-        let mut total = 0.0;
-        for i in 0..=n {
-            let v = i as f64 * dv;
-            let f = if i == 0 || i == n {
-                0.5
-            } else {
-                1.0
-            };
-            total += f * turbine.power_at(v) * self.weibull_probability(v, shape_k, scale_c);
-        }
-        total * dv
+    pub fn weibull_mean_power(&self, shape_k: f64, scale_c: f64, turbine: &WindTurbine) -> f64 {
+        let (xs, ws) = gauss_legendre(32, 0.0, 4.0 * scale_c);
+        xs.iter()
+            .zip(ws.iter())
+            .map(|(&v, &w)| w * turbine.power_at(v) * self.weibull_probability(v, shape_k, scale_c))
+            .sum()
     }
-}
-
-/// Trapezoidal helper: just for the wind power integral. (We avoid full
-/// Gauss-Legendre for now to keep the implementation small and auditable.)
-fn _trapezoid(f: impl Fn(f64) -> f64, a: f64, b: f64, n: usize) -> f64 {
-    let _ = f;
-    let _ = a;
-    let _ = b;
-    let _ = n;
-    0.0
-}
-
-#[allow(dead_code)]
-fn _gauss_helper() {
-    let _ = gauss_legendre;
-    let _ = gauss_legendre_std;
-    let _ = legendre;
 }
 
 /// A wind turbine specification with a power curve.
@@ -126,6 +96,14 @@ pub struct WindTurbine {
     /// samples; if `None`, the cubic power law is used.
     #[serde(default)]
     pub power_curve: Vec<(f64, f64)>,
+    /// Thrust coefficient `C_T` used by wake models (typically ~0.8 in the
+    /// high-thrust, near-Betz-optimal operating region).
+    #[serde(default = "default_thrust_coefficient")]
+    pub thrust_coefficient: f64,
+}
+
+fn default_thrust_coefficient() -> f64 {
+    0.8
 }
 
 impl WindTurbine {
@@ -147,12 +125,19 @@ impl WindTurbine {
             rated_mps,
             cut_out_mps,
             power_curve: Vec::new(),
+            thrust_coefficient: default_thrust_coefficient(),
         }
     }
 
     /// Add a power-curve sample point.
     pub fn with_curve_point(mut self, wind_speed_mps: f64, power_mw: f64) -> Self {
         self.power_curve.push((wind_speed_mps, power_mw));
+        self
+    }
+
+    /// Override the thrust coefficient used by wake models.
+    pub fn with_thrust_coefficient(mut self, ct: f64) -> Self {
+        self.thrust_coefficient = ct;
         self
     }
 
@@ -234,17 +219,18 @@ fn gauss_legendre_std(n: usize) -> (Vec<f64>, Vec<f64>) {
     (x, w)
 }
 
+/// Legendre polynomial `P_n(x)` and its derivative, via the three-term
+/// recurrence `(k+1) P_{k+1}(x) = (2k+1) x P_k(x) - k P_{k-1}(x)`.
 fn legendre(n: usize, x: f64) -> (f64, f64) {
     let mut p0 = 1.0;
     let mut p1 = x;
-    let mut dp = 1.0;
-    for _ in 1..n {
-        let p2 = ((2.0 * n as f64 - 1.0) * x * p1 - (n as f64 - 1.0) * p0) / n as f64;
+    for k in 1..n {
+        let kf = k as f64;
+        let p2 = ((2.0 * kf + 1.0) * x * p1 - kf * p0) / (kf + 1.0);
         p0 = p1;
         p1 = p2;
     }
-    let _ = dp;
-    let dpn = (n as f64 * (p1 - x * p0)) / (1.0 - x * x);
+    let dpn = (n as f64) * (x * p1 - p0) / (x * x - 1.0);
     (p1, dpn)
 }
 

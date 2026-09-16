@@ -1,4 +1,4 @@
-﻿//! # tpt-nrg-protection
+//! # tpt-nrg-protection
 //!
 //! Relay coordination and protection zone modelling.
 
@@ -139,13 +139,9 @@ mod tests {
         let si_2 = RelayCurve::StandardInverse.trip_time(2.0);
         assert!((si_2 - 10.03).abs() < 0.05, "SI M=2 = {si_2}");
         assert!((RelayCurve::VeryInverse.trip_time(2.0) - 13.5).abs() < 1e-9);
-        assert!(
-            (RelayCurve::ExtremelyInverse.trip_time(2.0) - 80.0 / 3.0).abs() < 1e-9
-        );
+        assert!((RelayCurve::ExtremelyInverse.trip_time(2.0) - 80.0 / 3.0).abs() < 1e-9);
         assert!((RelayCurve::VeryInverse.trip_time(5.0) - 3.375).abs() < 1e-9);
-        assert!(
-            (RelayCurve::ExtremelyInverse.trip_time(5.0) - 10.0 / 3.0).abs() < 1e-9
-        );
+        assert!((RelayCurve::ExtremelyInverse.trip_time(5.0) - 10.0 / 3.0).abs() < 1e-9);
         assert!(RelayCurve::StandardInverse.trip_time(1.0).is_infinite());
     }
 }

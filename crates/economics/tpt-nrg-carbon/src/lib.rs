@@ -1,11 +1,10 @@
-﻿//! # tpt-nrg-carbon
+//! # tpt-nrg-carbon
 //!
 //! Carbon intensity of electricity generation: kg CO₂ per MWh from the
 //! generator mix.
 
 #![deny(missing_docs)]
 
-use serde::{Deserialize, Serialize};
 use tpt_nrg_core::{EnergySystem, GeneratorType};
 
 /// Emission factor in kg CO₂ per MWh by fuel type.
@@ -16,7 +15,7 @@ use tpt_nrg_core::{EnergySystem, GeneratorType};
 pub fn emission_factor_kg_per_mwh(fuel: GeneratorType) -> f64 {
     match fuel {
         GeneratorType::Thermal => 900.0, // gas / coal average
-        GeneratorType::Hydro => 4.0,      // reservoir, lifecycle
+        GeneratorType::Hydro => 4.0,     // reservoir, lifecycle
         GeneratorType::Wind => 11.0,
         GeneratorType::Solar => 45.0,
         GeneratorType::Nuclear => 12.0,
@@ -49,10 +48,7 @@ pub fn carbon_intensity(system: &EnergySystem) -> f64 {
 
 /// Carbon emissions (tonnes CO₂) over a period at a given average output
 /// and duration.
-pub fn total_emissions_tonnes(
-    system: &EnergySystem,
-    duration_h: f64,
-) -> f64 {
+pub fn total_emissions_tonnes(system: &EnergySystem, duration_h: f64) -> f64 {
     let total_kg: f64 = system
         .generators
         .iter()

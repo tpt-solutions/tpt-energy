@@ -51,7 +51,9 @@ pub enum PowerFlowError {
     #[error("system has no slack bus")]
     NoSlackBus,
     /// The solver did not converge within `max_iterations`.
-    #[error("power flow did not converge after {iterations} iterations (mismatch = {mismatch:.3e})")]
+    #[error(
+        "power flow did not converge after {iterations} iterations (mismatch = {mismatch:.3e})"
+    )]
     NonConvergence {
         /// Iteration count.
         iterations: usize,
@@ -109,15 +111,9 @@ impl PowerFlowSolver {
     /// Solve the power flow for the given system.
     pub fn solve(&self, system: &EnergySystem) -> Result<PowerFlowResult, PowerFlowError> {
         match self.method {
-            PowerFlowMethod::NewtonRaphson => {
-                crate::newton_raphson::solve(system, self.options)
-            }
-            PowerFlowMethod::GaussSeidel => {
-                crate::gauss_seidel::solve(system, self.options)
-            }
-            PowerFlowMethod::FastDecoupled => {
-                crate::fast_decoupled::solve(system, self.options)
-            }
+            PowerFlowMethod::NewtonRaphson => crate::newton_raphson::solve(system, self.options),
+            PowerFlowMethod::GaussSeidel => crate::gauss_seidel::solve(system, self.options),
+            PowerFlowMethod::FastDecoupled => crate::fast_decoupled::solve(system, self.options),
             PowerFlowMethod::DcPowerFlow => crate::dc::solve(system),
         }
     }

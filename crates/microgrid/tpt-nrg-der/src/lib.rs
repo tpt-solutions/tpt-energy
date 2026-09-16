@@ -1,4 +1,4 @@
-﻿//! # tpt-nrg-der
+//! # tpt-nrg-der
 //!
 //! Distributed energy resource (DER) models and microgrid controllers.
 
@@ -55,24 +55,36 @@ impl DerAsset {
     /// = demand).
     pub fn net_power_mw(&self) -> f64 {
         match self {
-            DerAsset::Solar { capacity_mw, output_fraction } => capacity_mw * output_fraction,
-            DerAsset::Wind { capacity_mw, output_fraction } => capacity_mw * output_fraction,
+            DerAsset::Solar {
+                capacity_mw,
+                output_fraction,
+            } => capacity_mw * output_fraction,
+            DerAsset::Wind {
+                capacity_mw,
+                output_fraction,
+            } => capacity_mw * output_fraction,
             DerAsset::Battery {
                 power_rating_mw,
                 energy_capacity_mwh,
                 state_of_charge,
             } => {
                 // For a simplified view, report power as the rated charge rate
-                // when SoC > 50% and rated discharge when SoC < 50%.
+                // when SoC > 50% and rated discharge when SoC < 50%, capped by
+                // the energy actually available over a nominal 1-hour dispatch
+                // interval so the asset can't discharge more than it holds.
+                let available_mw = state_of_charge * energy_capacity_mwh;
                 if *state_of_charge > 0.5 {
-                    *power_rating_mw
+                    power_rating_mw.min(available_mw)
                 } else if *state_of_charge > 0.2 {
-                    *power_rating_mw * 0.5
+                    (*power_rating_mw * 0.5).min(available_mw)
                 } else {
                     0.0
                 }
             }
-            DerAsset::Load { rated_mw, demand_fraction } => -rated_mw * demand_fraction,
+            DerAsset::Load {
+                rated_mw,
+                demand_fraction,
+            } => -rated_mw * demand_fraction,
             DerAsset::Diesel { output_mw, .. } => *output_mw,
         }
     }
@@ -120,10 +132,7 @@ impl MicrogridController {
 
     /// Total generation (MW) from the assets.
     pub fn total_generation_mw(&self) -> f64 {
-        self.assets
-            .iter()
-            .map(|a| a.net_power_mw().max(0.0))
-            .sum()
+        self.assets.iter().map(|a| a.net_power_mw().max(0.0)).sum()
     }
 
     /// Total load including DER loads.

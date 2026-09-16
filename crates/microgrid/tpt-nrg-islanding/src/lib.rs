@@ -1,4 +1,4 @@
-﻿//! # tpt-nrg-islanding
+//! # tpt-nrg-islanding
 //!
 //! Loss-of-mains detection, controlled transition to islanded operation,
 //! and resynchronization with the main grid.
@@ -168,9 +168,7 @@ pub fn resynchronize(
     let a_err = raw_a_err.min(two_pi - raw_a_err);
     let f_err = (freq_microgrid - freq_grid).abs();
     SyncResult {
-        success: v_err < v_tolerance_pu
-            && a_err < angle_tolerance_rad
-            && f_err < freq_tolerance_hz,
+        success: v_err < v_tolerance_pu && a_err < angle_tolerance_rad && f_err < freq_tolerance_hz,
         voltage_error_pu: v_err,
         angle_error_rad: a_err,
         frequency_error_hz: f_err,
@@ -235,7 +233,15 @@ mod tests {
     fn resync_wraps_angle_error() {
         // 2π vs 0 is the same phase: must sync, not report a ~6.28 rad error.
         let r = resynchronize(
-            1.0, 1.0, 2.0 * std::f64::consts::PI, 0.0, 60.0, 60.0, 0.05, 0.05, 0.1,
+            1.0,
+            1.0,
+            2.0 * std::f64::consts::PI,
+            0.0,
+            60.0,
+            60.0,
+            0.05,
+            0.05,
+            0.1,
         );
         assert!(r.success, "angle error = {}", r.angle_error_rad);
         assert!(r.angle_error_rad.abs() < 1e-9);

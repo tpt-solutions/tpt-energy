@@ -66,10 +66,12 @@ pub fn solve(system: &EnergySystem) -> Result<PowerFlowResult, PowerFlowError> {
         k += 1;
     }
     // V = 1.0 pu (DC power flow)
-    let v: Vec<f64> = (0..n).map(|i| match system.buses[i].bus_type {
-        BusType::Slack | BusType::Pv => system.buses[i].voltage_magnitude_pu,
-        _ => 1.0,
-    }).collect();
+    let v: Vec<f64> = (0..n)
+        .map(|i| match system.buses[i].bus_type {
+            BusType::Slack | BusType::Pv => system.buses[i].voltage_magnitude_pu,
+            _ => 1.0,
+        })
+        .collect();
 
     // Compute branch flows: P_ij = (θ_i - θ_j) / x_ij (pu)
     let map = bus_index_map(system);
@@ -91,7 +93,11 @@ pub fn solve(system: &EnergySystem) -> Result<PowerFlowResult, PowerFlowError> {
             _ => (0.0, 0.0),
         };
         let s = p_from_mw.abs();
-        let loading = if br.rating_mva > 0.0 { s / br.rating_mva } else { 0.0 };
+        let loading = if br.rating_mva > 0.0 {
+            s / br.rating_mva
+        } else {
+            0.0
+        };
         flows.push(crate::result::BranchFlow {
             id: br.id,
             p_from_mw: p_from_mw,

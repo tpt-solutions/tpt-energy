@@ -1,4 +1,4 @@
-﻿//! # tpt-nrg-powerflow
+//! # tpt-nrg-powerflow
 //!
 //! Power-flow solvers for TPT Energy: Newton–Raphson, Gauss–Seidel, Fast
 //! Decoupled, and DC power flow.

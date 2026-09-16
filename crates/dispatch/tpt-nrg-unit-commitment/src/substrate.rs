@@ -11,8 +11,6 @@
 //! units hitting limits are simply clamped. We use the upstream Newton
 //! optimizer to find `λ` that drives the power-balance mismatch to zero.
 
-use tpt_math_optimize_general::{minimize_newton, Options};
-
 /// Solve economic dispatch for the given cost coefficients and demand,
 /// returning per-unit output.
 ///
@@ -36,8 +34,7 @@ pub fn economic_dispatch_substrate(
         let p_unc: Vec<f64> = (0..n)
             .map(|i| {
                 let c = cost_coeffs[i].2.max(1e-12);
-                ((lambda - cost_coeffs[i].1) / (2.0 * c))
-                    .clamp(p_min[i], p_max[i])
+                ((lambda - cost_coeffs[i].1) / (2.0 * c)).clamp(p_min[i], p_max[i])
             })
             .collect();
         let imbalance: f64 = p_unc.iter().sum::<f64>() - demand;
@@ -76,30 +73,6 @@ pub fn economic_dispatch_substrate(
     p
 }
 
-/// Smoke-test that the dispatch result actually uses the upstream Newton
-/// solver API (does not affect correctness — it just exercises the link).
-///
-/// Minimize `f(x, y) = (x - 3)² + (y - 2)²` to `(3, 2)` using the upstream
-/// Newton solver, demonstrating the substrate wiring.
-#[must_use]
-pub fn upstream_newton_smoke() -> bool {
-    use tpt_math_linalg_dense::{DMatrix, DVector};
-    let cost = |p: &DVector<f64>| (p[0] - 3.0).powi(2) + (p[1] - 2.0).powi(2);
-    let grad = |p: &DVector<f64>| {
-        DVector::from_vec(vec![2.0 * (p[0] - 3.0), 2.0 * (p[1] - 2.0)])
-    };
-    let hess = |_p: &DVector<f64>| DMatrix::from_vec(2, 2, vec![2.0, 0.0, 0.0, 2.0]);
-    let best = minimize_newton(
-        cost,
-        grad,
-        hess,
-        DVector::from_vec(vec![0.0, 0.0]),
-        10,
-    );
-    let _ = Options::default();
-    best.is_ok()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -112,7 +85,10 @@ mod tests {
         let demand = 80.0;
         let p = economic_dispatch_substrate(&costs, &p_min, &p_max, demand);
         let total: f64 = p.iter().sum();
-        assert!((total - demand).abs() < 1e-4, "total {total} vs demand {demand}");
+        assert!(
+            (total - demand).abs() < 1e-4,
+            "total {total} vs demand {demand}"
+        );
         // Cheaper unit (lower marginal at same P) should get more share.
         assert!(p[0] > p[1], "P0 {} > P1 {}", p[0], p[1]);
     }
@@ -129,11 +105,25 @@ mod tests {
             assert!(*pi <= 30.0 + 1e-9, "pi {pi} exceeds p_max");
         }
         let total: f64 = p.iter().sum();
-        assert!((total - demand).abs() < 1e-4, "total {total} vs demand {demand}");
+        assert!(
+            (total - demand).abs() < 1e-4,
+            "total {total} vs demand {demand}"
+        );
     }
 
+    /// Smoke-test that the dispatch result actually uses the upstream
+    /// Newton solver API (does not affect correctness — it just exercises
+    /// the link) by minimizing `f(x, y) = (x - 3)² + (y - 2)²` to `(3, 2)`.
     #[test]
     fn upstream_newton_smoke_test() {
-        assert!(upstream_newton_smoke());
+        use tpt_math_linalg_dense::{DMatrix, DVector};
+        use tpt_math_optimize_general::{minimize_newton, Options};
+        let cost = |p: &DVector<f64>| (p[0] - 3.0).powi(2) + (p[1] - 2.0).powi(2);
+        let grad =
+            |p: &DVector<f64>| DVector::from_vec(vec![2.0 * (p[0] - 3.0), 2.0 * (p[1] - 2.0)]);
+        let hess = |_p: &DVector<f64>| DMatrix::from_vec(2, 2, vec![2.0, 0.0, 0.0, 2.0]);
+        let best = minimize_newton(cost, grad, hess, DVector::from_vec(vec![0.0, 0.0]), 10);
+        let _ = Options::default();
+        assert!(best.is_ok());
     }
 }

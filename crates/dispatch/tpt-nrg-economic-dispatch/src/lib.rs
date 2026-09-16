@@ -1,4 +1,4 @@
-﻿//! # tpt-nrg-economic-dispatch
+//! # tpt-nrg-economic-dispatch
 //!
 //! Economic dispatch with optional storage arbitrage: minimises total
 //! generation cost subject to power-balance and unit limits.
@@ -118,11 +118,7 @@ pub fn economic_dispatch(
             remaining -= p_max[i];
         }
     }
-    let total_cost: f64 = outputs
-        .iter()
-        .zip(c.iter())
-        .map(|(p, ci)| p * ci)
-        .sum();
+    let total_cost: f64 = outputs.iter().zip(c.iter()).map(|(p, ci)| p * ci).sum();
     Ok(EconomicDispatchResult {
         generator_outputs_mw: outputs,
         total_cost_dollar_per_h: total_cost,
@@ -256,8 +252,11 @@ mod tests {
         let r = economic_dispatch(&three_gen_system(), 200.0).unwrap();
         // G1 (max 100) is fully committed, G2 is marginal at the load.
         // Lambda = slope of G2's cost curve = 37.5.
-        assert!((r.marginal_cost_dollar_per_mwh - 37.5).abs() < 1.0,
-            "lambda = {}", r.marginal_cost_dollar_per_mwh);
+        assert!(
+            (r.marginal_cost_dollar_per_mwh - 37.5).abs() < 1.0,
+            "lambda = {}",
+            r.marginal_cost_dollar_per_mwh
+        );
     }
 
     #[test]
@@ -277,17 +276,11 @@ mod tests {
     #[test]
     fn load_below_must_run_minimum_is_an_error() {
         let mut sys = EnergySystem::new("ed2", "ED2", 100.0, 60.0);
-        sys.add_bus(tpt_nrg_core::Bus::new(
-            1,
-            "B1",
-            tpt_nrg_core::BusType::Pv,
-        ))
-        .unwrap();
+        sys.add_bus(tpt_nrg_core::Bus::new(1, "B1", tpt_nrg_core::BusType::Pv))
+            .unwrap();
         // No cost curve → must-run at p_min = 50 MW.
-        sys.add_generator(
-            Generator::new(1, "G1", GeneratorType::Nuclear, 400.0, 50.0).at_bus(1),
-        )
-        .unwrap();
+        sys.add_generator(Generator::new(1, "G1", GeneratorType::Nuclear, 400.0, 50.0).at_bus(1))
+            .unwrap();
         let r = economic_dispatch(&sys, 30.0);
         assert!(
             matches!(r, Err(DispatchError::LoadBelowMinimum { .. })),
@@ -300,7 +293,11 @@ mod tests {
         let prices = vec![10.0, 15.0, 20.0, 50.0, 80.0, 100.0, 30.0, 25.0];
         let plan = storage_arbitrage(&prices, 1.0, 100.0, 50.0, 0.9);
         // Should buy at 10/15/20/25/30 and sell at 50/80/100.
-        assert!(plan.net_revenue_dollar > 0.0, "revenue = {}", plan.net_revenue_dollar);
+        assert!(
+            plan.net_revenue_dollar > 0.0,
+            "revenue = {}",
+            plan.net_revenue_dollar
+        );
         // SoC should stay within bounds
         for s in &plan.state_of_charge {
             assert!(*s >= 0.0 && *s <= 100.0 + 1e-6, "soc = {s}");

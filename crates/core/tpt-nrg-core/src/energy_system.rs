@@ -185,14 +185,24 @@ impl EnergySystem {
     #[must_use]
     pub fn total_load_mw(&self) -> f64 {
         self.buses.iter().map(|b| b.load_mw).sum::<f64>()
-            + self.loads.iter().filter(|l| l.in_service).map(|l| l.p_mw).sum::<f64>()
+            + self
+                .loads
+                .iter()
+                .filter(|l| l.in_service)
+                .map(|l| l.p_mw)
+                .sum::<f64>()
     }
 
     /// Total system reactive load in MVAr.
     #[must_use]
     pub fn total_load_mvar(&self) -> f64 {
         self.buses.iter().map(|b| b.load_mvar).sum::<f64>()
-            + self.loads.iter().filter(|l| l.in_service).map(|l| l.q_mvar).sum::<f64>()
+            + self
+                .loads
+                .iter()
+                .filter(|l| l.in_service)
+                .map(|l| l.q_mvar)
+                .sum::<f64>()
     }
 
     /// Total installed generation capacity (MW) for in-service units.
@@ -208,7 +218,10 @@ impl EnergySystem {
     /// Number of slack buses (zero or one expected).
     #[must_use]
     pub fn slack_bus_count(&self) -> usize {
-        self.buses.iter().filter(|b| b.bus_type == BusType::Slack).count()
+        self.buses
+            .iter()
+            .filter(|b| b.bus_type == BusType::Slack)
+            .count()
     }
 
     /// Validate the system: returns `Ok(())` if there is exactly one slack bus
@@ -295,7 +308,8 @@ mod tests {
             .unwrap();
         sys.add_bus(Bus::new(2, "B2", BusType::Pq).with_load(50.0, 20.0))
             .unwrap();
-        sys.add_branch(Branch::new(1, "L1", 1, 2, 0.01, 0.05)).unwrap();
+        sys.add_branch(Branch::new(1, "L1", 1, 2, 0.01, 0.05))
+            .unwrap();
         sys.add_generator(
             Generator::new(1, "G1", GeneratorType::Thermal, 100.0, 10.0)
                 .at_bus(1)

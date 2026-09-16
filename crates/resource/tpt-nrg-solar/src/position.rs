@@ -7,7 +7,7 @@
 //! give ~±0.01° (≈36 arcsec), well within the needs of PV resource
 //! estimation.
 
-use chrono::{DateTime, Datelike, TimeZone, Timelike, Utc};
+use chrono::{DateTime, Datelike, Timelike, Utc};
 
 /// A solar position model parameterised by site location and timezone.
 #[derive(Debug, Clone)]
@@ -24,7 +24,12 @@ pub struct SolarModel {
 
 impl SolarModel {
     /// Construct a new model.
-    pub fn new(latitude_deg: f64, longitude_deg: f64, altitude_m: f64, timezone_offset_hours: f64) -> Self {
+    pub fn new(
+        latitude_deg: f64,
+        longitude_deg: f64,
+        altitude_m: f64,
+        timezone_offset_hours: f64,
+    ) -> Self {
         Self {
             latitude_deg,
             longitude_deg,
@@ -42,8 +47,7 @@ impl SolarModel {
         let lambda = (l + 1.915 * g.sin() + 0.020 * (2.0 * g).sin()).to_radians();
         let epsilon = (23.439 - 0.0000004 * n).to_radians();
 
-        // Right ascension and declination
-        let alpha = epsilon.sin().atan2(lambda.cos());
+        // Declination
         let delta = (epsilon.sin() * lambda.sin()).asin();
 
         // Sidereal time (in hours)
@@ -59,8 +63,7 @@ impl SolarModel {
             + t.minute() as f64 / 60.0
             + t.second() as f64 / 3600.0
             + (t.timestamp_subsec_micros() as f64) / 3_600_000_000.0;
-        let solar_hour = ut_hour + (self.longitude_deg / 15.0)
-            + equation_of_time_hours(n);
+        let solar_hour = ut_hour + (self.longitude_deg / 15.0) + equation_of_time_hours(n);
         let hour_angle_deg = (solar_hour - 12.0) * 15.0;
         let hour_angle_rad = hour_angle_deg.to_radians();
         let _ = lmst_rad;
@@ -157,11 +160,9 @@ fn julian_day(t: DateTime<Utc>) -> f64 {
     let (y2, m2) = if m <= 2 { (y - 1, m + 12) } else { (y, m) };
     let a = (y2 as f64 / 100.0).floor();
     let b = 2.0 - a + (a / 4.0).floor();
-    let jd = (365.25 * ((y2 + 4716) as f64)).floor()
-        + (30.6001 * ((m2 + 1) as f64)).floor()
-        + d
-        + b
-        - 1524.5;
+    let jd =
+        (365.25 * ((y2 + 4716) as f64)).floor() + (30.6001 * ((m2 + 1) as f64)).floor() + d + b
+            - 1524.5;
     jd
 }
 
@@ -172,8 +173,7 @@ fn equation_of_time_hours(n: f64) -> f64 {
     let b = (360.0 / 365.0) * (n - 1.0);
     let b_rad = b.to_radians();
     let eot_min = 229.18
-        * (0.000075
-            + 0.001868 * b_rad.cos()
+        * (0.000075 + 0.001868 * b_rad.cos()
             - 0.032077 * b_rad.sin()
             - 0.014615 * (2.0 * b_rad).cos()
             - 0.040849 * (2.0 * b_rad).sin());
@@ -183,6 +183,7 @@ fn equation_of_time_hours(n: f64) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::TimeZone;
 
     fn at(hour: u32) -> DateTime<Utc> {
         Utc.with_ymd_and_hms(2026, 6, 21, hour, 0, 0).unwrap()
@@ -195,11 +196,7 @@ mod tests {
         // naive acos formula divides by ~0 and returns NaN.
         let m = SolarModel::new(23.45, 0.0, 0.0, 0.0);
         let pos = m.solar_position(at(12));
-        assert!(
-            pos.azimuth_deg.is_finite(),
-            "azimuth = {}",
-            pos.azimuth_deg
-        );
+        assert!(pos.azimuth_deg.is_finite(), "azimuth = {}", pos.azimuth_deg);
         assert!(pos.altitude_deg > 89.0);
     }
 
@@ -211,8 +208,11 @@ mod tests {
         assert!(pos.is_daytime());
         // Solar noon: sun should be near south, altitude close to
         // (90 - |lat - decl|) = (90 - |51.5 - 23.4|) ≈ 61.9°
-        assert!(pos.altitude_deg > 58.0 && pos.altitude_deg < 65.0,
-            "altitude = {}", pos.altitude_deg);
+        assert!(
+            pos.altitude_deg > 58.0 && pos.altitude_deg < 65.0,
+            "altitude = {}",
+            pos.altitude_deg
+        );
     }
 
     #[test]
@@ -220,17 +220,27 @@ mod tests {
         // Tromsø (69.65°N) in midwinter: sun below horizon all day.
         let m = SolarModel::new(69.65, 19.0, 0.0, 1.0);
         let p = m.solar_position(Utc.with_ymd_and_hms(2026, 12, 21, 12, 0, 0).unwrap());
-        assert!(!p.is_daytime(), "expected polar night, got alt={}", p.altitude_deg);
+        assert!(
+            !p.is_daytime(),
+            "expected polar night, got alt={}",
+            p.altitude_deg
+        );
     }
 
     #[test]
     fn declination_summer_solstice() {
         let m = SolarModel::new(0.0, 0.0, 0.0, 0.0);
         let pos = m.solar_position(Utc.with_ymd_and_hms(2026, 6, 21, 12, 0, 0).unwrap());
-        eprintln!("decl = {}, alt = {}, az = {}", pos.declination_deg, pos.altitude_deg, pos.azimuth_deg);
+        eprintln!(
+            "decl = {}, alt = {}, az = {}",
+            pos.declination_deg, pos.altitude_deg, pos.azimuth_deg
+        );
         // Tropical latitude at equinox-ish declination: should be close to
         // 23.4° at solstice.
-        assert!((pos.declination_deg - 23.4).abs() < 1.5,
-            "declination = {}", pos.declination_deg);
+        assert!(
+            (pos.declination_deg - 23.4).abs() < 1.5,
+            "declination = {}",
+            pos.declination_deg
+        );
     }
 }

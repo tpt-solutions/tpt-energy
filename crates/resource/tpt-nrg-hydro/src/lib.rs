@@ -1,4 +1,4 @@
-﻿//! # tpt-nrg-hydro
+//! # tpt-nrg-hydro
 //!
 //! Hydroelectric power calculation: head × flow × efficiency → MW.
 

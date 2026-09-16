@@ -34,10 +34,7 @@ mod tests {
         let smoothed = smooth_voltage_measurements(&measurement, n_taps, cutoff);
         // Interior samples (away from edge transients) should equal DC.
         for (i, &v) in smoothed.iter().enumerate().take(40).skip(8) {
-            assert!(
-                (v - 1.05).abs() < 1e-6,
-                "sample {i}: smoothed {v} != 1.05"
-            );
+            assert!((v - 1.05).abs() < 1e-6, "sample {i}: smoothed {v} != 1.05");
         }
     }
 
@@ -51,7 +48,8 @@ mod tests {
         let smoothed = smooth_voltage_measurements(&signal, 15, 0.1);
         // Interior RMS of smoothed should be much smaller than original.
         let orig_rms: f64 = (signal.iter().map(|x| x * x).sum::<f64>() / n as f64).sqrt();
-        let sm_rms: f64 = (smoothed.iter().skip(8).take(48).map(|x| x * x).sum::<f64>() / 48.0).sqrt();
+        let sm_rms: f64 =
+            (smoothed.iter().skip(8).take(48).map(|x| x * x).sum::<f64>() / 48.0).sqrt();
         assert!(sm_rms < 0.3 * orig_rms, "sm {sm_rms} vs orig {orig_rms}");
     }
 }

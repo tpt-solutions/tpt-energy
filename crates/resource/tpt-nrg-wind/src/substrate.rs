@@ -11,7 +11,7 @@
 #[must_use]
 pub fn normal_sample_mean_var(n: u64) -> (f64, f64) {
     use tpt_math_prob_core::{Distribution, SplitMix64};
-    use tpt_math_prob_dist::{Dist, normal};
+    use tpt_math_prob_dist::{normal, Dist};
 
     let mut rng = SplitMix64::seed_from_u64(7);
     let dist = normal((0.0, 1.0)).expect("standard normal");

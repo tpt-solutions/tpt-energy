@@ -1,4 +1,4 @@
-﻿//! # tpt-nrg-solar
+//! # tpt-nrg-solar
 //!
 //! Solar position (SPA-equivalent), clear-sky irradiance, plane-of-array
 //! transposition, and PV plant output with temperature derating.
@@ -10,11 +10,11 @@
 
 #![deny(missing_docs)]
 
-#[cfg(feature = "substrate")]
-mod substrate;
 mod irradiance;
 mod position;
 mod pv;
+#[cfg(feature = "substrate")]
+mod substrate;
 
 pub use irradiance::{Irradiance, SkyCondition};
 pub use position::{SolarModel, SolarPosition};

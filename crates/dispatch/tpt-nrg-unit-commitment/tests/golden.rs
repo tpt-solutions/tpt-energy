@@ -34,7 +34,8 @@ fn uc_system() -> EnergySystem {
 fn ed_system() -> EnergySystem {
     let mut sys = EnergySystem::new("ed", "ED", 100.0, 60.0);
     for i in 1..=3 {
-        sys.add_bus(Bus::new(i, format!("B{i}"), BusType::Pv)).unwrap();
+        sys.add_bus(Bus::new(i, format!("B{i}"), BusType::Pv))
+            .unwrap();
     }
     sys.add_generator(
         Generator::new(1, "G1", GeneratorType::Thermal, 100.0, 20.0)
@@ -76,10 +77,7 @@ fn unit_commitment_24hr_meets_load() {
     let r = unit_commitment(&uc_system(), &loads);
     for (k, &load) in loads.iter().enumerate() {
         let total: f64 = r.outputs.iter().map(|o| o[k]).sum();
-        assert!(
-            total >= load - 1.0,
-            "hour {k}: total={total} < load={load}"
-        );
+        assert!(total >= load - 1.0, "hour {k}: total={total} < load={load}");
     }
 }
 
@@ -112,7 +110,10 @@ fn economic_dispatch_5gen_matches_golden() {
             assert!(
                 (got - want).abs() < case.tolerance_mw,
                 "load {}: gen {}: got {}, want {}",
-                case.load_mw, i, got, want
+                case.load_mw,
+                i,
+                got,
+                want
             );
         }
         assert!(

@@ -68,7 +68,8 @@ fn battery_soc_cycling_matches_golden() {
                 b.charge(cyc.power_mw, cyc.duration_h).expect("charge");
             }
             "discharge" => {
-                b.discharge(cyc.power_mw, cyc.duration_h).expect("discharge");
+                b.discharge(cyc.power_mw, cyc.duration_h)
+                    .expect("discharge");
             }
             other => panic!("step {i}: unknown action {other}"),
         }

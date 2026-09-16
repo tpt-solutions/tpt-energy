@@ -9,9 +9,9 @@
 mod admittance;
 mod graph;
 
-pub use admittance::{AdmittanceMatrix, AdmittanceMatrixBuilder};
 #[cfg(feature = "substrate")]
 pub use admittance::build_sparse_coo;
+pub use admittance::{AdmittanceMatrix, AdmittanceMatrixBuilder};
 pub use graph::{NetworkTopology, PathResult};
 
 use thiserror::Error;

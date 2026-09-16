@@ -10,31 +10,34 @@ use tpt_eng_materials::{Material, MaterialCategory, MaterialLibrary, Property};
 pub fn nmc811_library() -> MaterialLibrary {
     let mut lib = MaterialLibrary::new();
     lib.add(
-        Material::new("cathode-nmc811", "LiNi0.8Mn0.1Co0.1O2", MaterialCategory::Ceramic)
-            .with_property(
-                "nominal-capacity-ah-per-kg",
-                Property::Scalar {
-                    value: 200.0,
-                    unit: "Ah/kg".into(),
-                },
-            )
-            .with_property(
-                "avg-discharge-voltage",
-                Property::Scalar {
-                    value: 3.85,
-                    unit: "V".into(),
-                },
-            ),
+        Material::new(
+            "cathode-nmc811",
+            "LiNi0.8Mn0.1Co0.1O2",
+            MaterialCategory::Ceramic,
+        )
+        .with_property(
+            "nominal-capacity-ah-per-kg",
+            Property::Scalar {
+                value: 200.0,
+                unit: "Ah/kg".into(),
+            },
+        )
+        .with_property(
+            "avg-discharge-voltage",
+            Property::Scalar {
+                value: 3.85,
+                unit: "V".into(),
+            },
+        ),
     );
     lib.add(
-        Material::new("anode-graphite", "Graphite", MaterialCategory::Other)
-            .with_property(
-                "nominal-capacity-ah-per-kg",
-                Property::Scalar {
-                    value: 372.0,
-                    unit: "Ah/kg".into(),
-                },
-            ),
+        Material::new("anode-graphite", "Graphite", MaterialCategory::Other).with_property(
+            "nominal-capacity-ah-per-kg",
+            Property::Scalar {
+                value: 372.0,
+                unit: "Ah/kg".into(),
+            },
+        ),
     );
     lib
 }
@@ -68,4 +71,5 @@ mod tests {
             .and_then(|m| m.value("nominal-capacity-ah-per-kg", 0.0))
             .expect("present");
         assert!((cap - 372.0).abs() < 1e-9);
-    }}
+    }
+}

@@ -1,4 +1,4 @@
-﻿//! # tpt-nrg-lcoe
+//! # tpt-nrg-lcoe
 //!
 //! Levelized cost of energy (LCOE), net present value (NPV), and internal
 //! rate of return (IRR) for energy projects.
@@ -129,16 +129,7 @@ mod tests {
     fn lcoe_simple() {
         // CAPEX $1B, 30y, 7% discount, 100 MW at 50% CF = 100 * 0.5 * 8760 = 438 GWh/yr
         // Annual fixed O&M $10M, no fuel/variable.
-        let i = LcoeInputs::new(
-            1.0e9,
-            1.0e7,
-            0.0,
-            0.0,
-            100.0 * 0.5 * 8760.0,
-            30,
-            0.07,
-            0.5,
-        );
+        let i = LcoeInputs::new(1.0e9, 1.0e7, 0.0, 0.0, 100.0 * 0.5 * 8760.0, 30, 0.07, 0.5);
         let lcoe = levelized_cost_of_energy(&i);
         // Expected ~$200/MWh: 1B CAPEX over 30y at 7% CRF ≈ $80M/yr, plus
         // $10M O&M = $90M/yr / 438 GWh = $206/MWh.

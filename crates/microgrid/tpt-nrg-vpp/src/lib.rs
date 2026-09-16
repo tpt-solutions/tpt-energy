@@ -1,4 +1,4 @@
-﻿//! # tpt-nrg-vpp
+//! # tpt-nrg-vpp
 //!
 //! Virtual power plant: aggregation of DER assets for market participation.
 
@@ -37,10 +37,7 @@ pub struct VirtualPowerPlant {
 impl VirtualPowerPlant {
     /// Construct a new VPP from a list of per-asset (capacity, current
     /// output, up-flex, down-flex).
-    pub fn new(
-        assets: Vec<(f64, f64, f64, f64)>,
-        aggregation_model: AggregationModel,
-    ) -> Self {
+    pub fn new(assets: Vec<(f64, f64, f64, f64)>, aggregation_model: AggregationModel) -> Self {
         let mut caps = Vec::new();
         let mut outs = Vec::new();
         let mut up = Vec::new();
@@ -93,11 +90,7 @@ impl VirtualPowerPlant {
             };
         }
         let scale = (delta_mw / total_up).clamp(0.0, 1.0);
-        let per_asset: Vec<f64> = self
-            .asset_up_flex_mw
-            .iter()
-            .map(|u| u * scale)
-            .collect();
+        let per_asset: Vec<f64> = self.asset_up_flex_mw.iter().map(|u| u * scale).collect();
         let delivered = per_asset.iter().sum();
         DispatchPlan {
             per_asset_delta_mw: per_asset,

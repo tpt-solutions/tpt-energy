@@ -1,4 +1,4 @@
-﻿//! # tpt-nrg-market
+//! # tpt-nrg-market
 //!
 //! Market signal modeling: locational marginal prices, day-ahead vs.
 //! real-time price spreads, scarcity pricing.
@@ -71,11 +71,16 @@ mod tests {
 
     fn ts() -> UniformTimeSeries {
         let start = chrono::Utc.with_ymd_and_hms(2026, 1, 1, 0, 0, 0).unwrap();
-        UniformTimeSeries::new("price", "$/MWh", start, 3600, vec![
-            20.0, 18.0, 15.0, 15.0, 18.0, 25.0, 35.0, 50.0, 60.0, 65.0,
-            70.0, 75.0, 80.0, 75.0, 70.0, 65.0, 60.0, 80.0, 100.0, 90.0,
-            70.0, 50.0, 35.0, 25.0,
-        ])
+        UniformTimeSeries::new(
+            "price",
+            "$/MWh",
+            start,
+            3600,
+            vec![
+                20.0, 18.0, 15.0, 15.0, 18.0, 25.0, 35.0, 50.0, 60.0, 65.0, 70.0, 75.0, 80.0, 75.0,
+                70.0, 65.0, 60.0, 80.0, 100.0, 90.0, 70.0, 50.0, 35.0, 25.0,
+            ],
+        )
     }
 
     #[test]

@@ -1,4 +1,4 @@
-﻿//! # tpt-nrg-load
+//! # tpt-nrg-load
 //!
 //! Load forecasting and demand-response models.
 
@@ -70,9 +70,8 @@ impl LoadModel {
         } else {
             self.shape[hour_of_week.min(self.shape.len() - 1)]
         };
-        let temp_term = self
-            .temperature_sensitivity_mw_per_c
-            * (temperature_c - self.reference_temperature_c);
+        let temp_term =
+            self.temperature_sensitivity_mw_per_c * (temperature_c - self.reference_temperature_c);
         let price_term = self.price_elasticity_mw_per_dollar_per_mwh * price_dollar_per_mwh;
         ((self.base_load_mw + temp_term + price_term) * shape_mult).max(0.0)
     }

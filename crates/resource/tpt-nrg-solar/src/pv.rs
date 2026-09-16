@@ -94,8 +94,8 @@ impl PvPlant {
         // Soiling derating
         let poa_eff = poa_w_per_m2 * (1.0 - self.config.soiling_loss);
         // Cell temperature via NOCT model
-        let cell_t = self.config.ambient_celsius
-            + (self.config.noct_celsius - 20.0) * poa_eff / 800.0;
+        let cell_t =
+            self.config.ambient_celsius + (self.config.noct_celsius - 20.0) * poa_eff / 800.0;
         // DC power (linear derating with temperature)
         let stc_irradiance = 1000.0;
         let p_dc = self.config.dc_capacity_mwp
@@ -123,7 +123,8 @@ impl PvPlant {
 
     /// Compute output from horizontal irradiance.
     pub fn output_from_irrad(&self, irrad: &Irradiance, pos: &SolarPosition) -> PvOutput {
-        let poa = plane_of_array_irradiance(irrad, pos, self.config.tilt_deg, self.config.azimuth_deg);
+        let poa =
+            plane_of_array_irradiance(irrad, pos, self.config.tilt_deg, self.config.azimuth_deg);
         self.output_from_poa(poa)
     }
 
@@ -183,7 +184,11 @@ mod tests {
     fn cell_temperature_warmer_than_ambient() {
         let p = plant();
         let out = p.output_at(midday_utc());
-        assert!(out.cell_temperature_c > 25.0, "cell_t = {}", out.cell_temperature_c);
+        assert!(
+            out.cell_temperature_c > 25.0,
+            "cell_t = {}",
+            out.cell_temperature_c
+        );
     }
 
     #[test]

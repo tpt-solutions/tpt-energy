@@ -71,7 +71,10 @@ pub(crate) fn bus_schedules_pu(system: &EnergySystem) -> (Vec<f64>, Vec<f64>) {
             p_sched[*idx] += g.p_schedule_mw / base;
             // Zero out Q schedule at generator buses — Q is the unknown for PV
             // buses, and slack Q is determined by the system balance.
-            if matches!(system.buses[*idx].bus_type, tpt_nrg_core::BusType::Pv | tpt_nrg_core::BusType::Slack) {
+            if matches!(
+                system.buses[*idx].bus_type,
+                tpt_nrg_core::BusType::Pv | tpt_nrg_core::BusType::Slack
+            ) {
                 q_sched[*idx] = 0.0;
             }
         }

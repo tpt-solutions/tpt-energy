@@ -20,8 +20,10 @@ pub fn earth_sun_distance_au(days_since_j2000: f64) -> f64 {
     let e = 0.0167;
     let mean_motion_per_day = 2.0 * std::f64::consts::PI / 365.25;
     let m0 = 0.0_f64; // arbitrary reference epoch
-    let mean_anomaly = (m0 + mean_motion_per_day * days_since_j2000).rem_euclid(2.0 * std::f64::consts::PI);
-    let el = OrbitalElements::new(a, e, 0.0, 0.0, 0.0, mean_anomaly, 1.0).expect("valid earth orbit");
+    let mean_anomaly =
+        (m0 + mean_motion_per_day * days_since_j2000).rem_euclid(2.0 * std::f64::consts::PI);
+    let el =
+        OrbitalElements::new(a, e, 0.0, 0.0, 0.0, mean_anomaly, 1.0).expect("valid earth orbit");
     let (r, _v) = el.state_vector();
     r.norm()
 }
@@ -44,7 +46,10 @@ mod tests {
         // Perihelion (~Jan 3) and aphelion (~Jul 4) differ by ~3.3%.
         let d_peri = earth_sun_distance_au(3.0); // ~Jan 3
         let d_aph = earth_sun_distance_au(185.0); // ~Jul 4
-        assert!(d_peri < d_aph, "perihelion {d_peri} should be < aphelion {d_aph}");
+        assert!(
+            d_peri < d_aph,
+            "perihelion {d_peri} should be < aphelion {d_aph}"
+        );
         assert!((d_aph - d_peri).abs() < 0.1, "delta {d_aph} - {d_peri}");
     }
 

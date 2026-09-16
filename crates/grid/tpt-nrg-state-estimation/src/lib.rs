@@ -1,4 +1,4 @@
-﻿//! # tpt-nrg-state-estimation
+//! # tpt-nrg-state-estimation
 //!
 //! Kalman-filter-based grid state estimator (DC approximation).
 //!
@@ -117,15 +117,18 @@ pub fn run_dc_state_estimation(
 }
 
 fn col_idx(j: usize, slack: usize) -> usize {
-    if j > slack { j - 1 } else { j }
+    if j > slack {
+        j - 1
+    } else {
+        j
+    }
 }
 
 fn share_branch(sys: &EnergySystem, i: usize, j: usize) -> bool {
     let id_i = sys.buses[i].id;
     let id_j = sys.buses[j].id;
     sys.branches.iter().any(|b| {
-        (b.from_bus == id_i && b.to_bus == id_j)
-            || (b.from_bus == id_j && b.to_bus == id_i)
+        (b.from_bus == id_i && b.to_bus == id_j) || (b.from_bus == id_j && b.to_bus == id_i)
     })
 }
 
@@ -135,8 +138,7 @@ fn reactance_between(sys: &EnergySystem, i: usize, j: usize) -> Option<f64> {
     sys.branches
         .iter()
         .find(|b| {
-            (b.from_bus == id_i && b.to_bus == id_j)
-                || (b.from_bus == id_j && b.to_bus == id_i)
+            (b.from_bus == id_i && b.to_bus == id_j) || (b.from_bus == id_j && b.to_bus == id_i)
         })
         .map(|b| b.reactance_pu)
 }
@@ -152,12 +154,12 @@ mod tests {
             .unwrap();
         sys.add_bus(Bus::new(2, "B2", BusType::Pq)).unwrap();
         sys.add_bus(Bus::new(3, "B3", BusType::Pq)).unwrap();
-        sys.add_branch(Branch::new(1, "L12", 1, 2, 0.01, 0.1)).unwrap();
-        sys.add_branch(Branch::new(2, "L23", 2, 3, 0.01, 0.1)).unwrap();
-        sys.add_generator(
-            Generator::new(1, "G1", GeneratorType::Thermal, 100.0, 0.0).at_bus(1),
-        )
-        .unwrap();
+        sys.add_branch(Branch::new(1, "L12", 1, 2, 0.01, 0.1))
+            .unwrap();
+        sys.add_branch(Branch::new(2, "L23", 2, 3, 0.01, 0.1))
+            .unwrap();
+        sys.add_generator(Generator::new(1, "G1", GeneratorType::Thermal, 100.0, 0.0).at_bus(1))
+            .unwrap();
         sys
     }
 

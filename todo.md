@@ -317,3 +317,55 @@ into the state-estimation solver.
 - [ ] Publish all crates to crates.io *(requires crates.io API token — out of local scope)*
 - [ ] Tag `v1.0.0` *(depends on publish + final RC cycle)*
 - [ ] Establish ongoing SemVer / 6-week release cadence *(process; tracked via `docs.yml` and `release.yml` workflows)*
+
+---
+
+## Phase 10 — CI Health & Quality Backlog
+
+**Audit note (2026-09-16):** All four jobs in `.github/workflows/ci.yml` plus the
+`docs.yml` workflows currently fail on `master`. Every item below cites the
+command that reproduces the failure locally. The fix pass that landed as
+`92f452f` ("Fix correctness bugs across power flow, dispatch, and resource
+crates") did not address any of these.
+
+### `fmt` job (`.github/workflows/ci.yml`)
+- [ ] Add `.gitattributes` (`* text=auto eol=lf`) and renormalize the tree: `cargo fmt --all -- --check` currently reports 140 `Diff in ...` / `Incorrect newline style ...` entries because the working tree stores CRLF while `rustfmt.toml` sets `newline_style = "Unix"`
+- [ ] Resolve the nightly-only `rustfmt.toml` options (`format_code_in_doc_comments`, `trailing_comma = Vertical`): they warn and are silently ignored on the stable toolchain the workflow installs — either drop them or add a nightly `rustfmt` component
+- [ ] Run `cargo fmt --all` and commit the formatting-only diff
+
+### `clippy` job
+- [ ] Reconcile `-D warnings` with the per-crate lint policy: `cargo clippy --workspace --all-targets --all-features -- -D warnings` emits 107 errors, because all 24 crates enable `[lints.clippy] pedantic = { level = "warn", priority = -1 }` plus `missing_errors_doc` / `missing_panics_doc`
+- [ ] Decide the policy for that gate: fix the pedantic set, or narrow CI to the default lint groups and keep pedantic advisory
+- [ ] Clear the high-count pedantic groups: 95 `must_use_candidate`, 34 `doc_markdown`, 28 `must_use` on `Self`-returning methods, 20 `missing_errors_doc`, 15 `must_use` on free functions, 14 lossy `usize` → `f64` casts, 13 unseparated integer literals, 11 float strict-comparison
+- [ ] Replace the lossy `as f64` / `as usize` / `as u64` casts flagged by `clippy::cast_precision_loss` / `cast_possible_truncation` with `f64::from` or checked conversions
+
+### `test` job
+- [ ] Fix the 17 rustc warnings that `RUSTFLAGS: -D warnings` promotes to hard errors: `tpt-nrg-solar/src/position.rs:10` (`TimeZone` import), `position.rs:46` (`alpha`), `tpt-nrg-solar/src/irradiance.rs:46` (`altitude_m`), `irradiance.rs:69` (`c`), `tpt-nrg-powerflow/src/newton_raphson.rs:8` (`PowerFlowMethod`, `PowerFlowSolver`), `newton_raphson.rs:45-46` and `gauss_seidel.rs:76-77` (`mut` not needed), `tpt-nrg-powerflow/tests/golden.rs:5` (`PowerFlowError`), `tpt-nrg-fault/src/lib.rs:273-274` (`a`, `b`), `tpt-nrg-wind/tests/golden.rs:64` (`thrust_coefficient` never read), `tpt-nrg-carbon/src/lib.rs:8` (`Serialize`, `Deserialize`), `tpt-nrg-der/src/lib.rs:62` (`energy_capacity_mwh`), `tpt-nrg-wind/src/wake.rs:126` (`dir_rad_for_test` never used)
+- [ ] Triage the unused parameters above: each one either needs wiring up (see "Code gaps" below) or an explicit `_` prefix with a comment explaining why it is unused
+
+### `docs` job
+- [ ] Move `docs/book/SUMMARY.md` to `docs/book/src/SUMMARY.md`: `book.toml` sets `src = "src"`, so `mdbook build docs/book` cannot find the summary even though all 20 chapters it links exist
+- [ ] Fix the rustdoc `-D warnings` failures (`RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps` exits 101): unresolved intra-doc link to `CostCurve`, unnecessary parentheses around match-arm expressions (`tpt-nrg-economic-dispatch`, `tpt-nrg-fault`), unused imports
+
+### Documentation / CHANGELOG drift (introduced by `92f452f`)
+- [ ] Correct `docs/book/src/crate-dispatch.md:63-65`: it calls the removed `total_operating_reserve(...)` and the old 3-argument `spinning_reserve_margin(...)`; replace with `assess_reserves` and the headroom-only `spinning_reserve_margin(online_capacity_mw, current_output_mw)`
+- [ ] Correct the wake-model claims in `docs/book/src/crate-wind.md:35-36`, `docs/book/src/crate-status.md:19`, `CHANGELOG.md` and `README.md`: `Frandsen` and `EddyViscosity` are not implemented — `WindFarm::effective_wind_speeds()` asserts on anything other than `JensenPark`
+- [ ] Document the API changes from `92f452f` wherever the book references them: `off_peak_price()` now returns `Option<f64>`, and the reserve API is now `ReserveAssessment` / `assess_reserves`
+- [ ] Add `### Fixed` (and `### Changed` for the `Option` / `ReserveAssessment` API changes) sections to `CHANGELOG.md` covering the 26-file correctness pass
+- [ ] Re-verify the `Stable` status claims in `README.md` and `docs/book/src/crate-status.md` against the current public API surface
+
+### Code gaps and dead code
+- [ ] `tpt-nrg-wind`: the Jensen wake hardcodes `let ct: f64 = 0.8;` at `wake.rs:94` and ignores the turbine's thrust coefficient — thread the `WindTurbine` C_T through the deficit calculation (this is why `tests/golden.rs` reports `thrust_coefficient` as never read)
+- [ ] Implement `WakeModel::Frandsen` (Gaussian profile) and `WakeModel::EddyViscosity` instead of asserting, then add a golden fixture for each
+- [ ] Remove dead code: `turbine.rs` `_trapezoid` (always returns `0.0`) and `_gauss_helper`, `wake.rs` `dir_rad_for_test`
+- [ ] Populate `test-data/nrel/` (only a `README.md` placeholder today) or drop it from the crate-status claims
+
+### CI coverage gaps
+- [ ] Build the `examples/` sub-workspace in CI: `examples/Cargo.toml` declares its own `[workspace]`, so `generate-ieee-goldens`, `energy-cycle` and the rest are never compiled by any workflow (they do build locally)
+- [ ] Wire the `benches/` stubs into the workspace with `criterion` and `[[bench]]` targets (`newton-raphson-100k-bus`, `unit-commitment-milp`, `solar-spa-calculation` are all `_placeholder()`)
+- [ ] Add a CI guard that re-runs the golden generators (`cargo run --bin generate-ieee-goldens` from `examples/`) and fails on a dirty diff, so fixtures cannot silently drift from the solvers
+
+**Still open from earlier phases (not newly discovered):** IEEE 57-bus <1% convergence
+under Newton-Raphson with Q-limit enforcement + continuation (Phase 2 milestone note,
+RFC 0001), and the full non-linear WLS state estimator with IEEE 118-bus validation
+(Phase 6 milestone note).

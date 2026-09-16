@@ -1,4 +1,4 @@
-﻿//! # tpt-nrg-fault
+//! # tpt-nrg-fault
 //!
 //! Short-circuit (fault) analysis using the symmetrical-component method:
 //! three-phase, line-to-line, line-to-ground, and double line-to-ground
@@ -107,7 +107,11 @@ impl<'a> FaultAnalyzer<'a> {
     /// [`FaultAnalyzer::fault_from_sequence`].
     pub fn sequence_network(&self, bus: usize) -> SequenceNetwork {
         let z1 = self.z1_thevenin_radial(bus);
-        SequenceNetwork { z1, z2: z1, z0: 3.0 * z1 }
+        SequenceNetwork {
+            z1,
+            z2: z1,
+            z0: 3.0 * z1,
+        }
     }
 
     /// Compute the per-phase fault current from a user-supplied sequence
@@ -129,7 +133,11 @@ impl<'a> FaultAnalyzer<'a> {
             },
             FaultType::LineToLine => {
                 let i1 = pre_voltage / (net.z1 + net.z2);
-                SequenceCurrents { i1, i2: -i1, i0: 0.0 }
+                SequenceCurrents {
+                    i1,
+                    i2: -i1,
+                    i0: 0.0,
+                }
             }
             FaultType::LineToGround => {
                 let i1 = pre_voltage / (net.z1 + net.z2 + net.z0);
@@ -151,8 +159,8 @@ impl<'a> FaultAnalyzer<'a> {
             FaultType::LineToGround => 3.0 * seq.i1.abs(),
             FaultType::DoubleLineToGround => 3.0 * seq.i0.abs(),
         };
-        let base_amps = self.system.base_mva * 1.0e6
-            / ((self.bus_base_kv(bus) * 1000.0) * (3.0_f64).sqrt());
+        let base_amps =
+            self.system.base_mva * 1.0e6 / ((self.bus_base_kv(bus) * 1000.0) * (3.0_f64).sqrt());
         let i_fault_amps = i_fault_pu * base_amps;
         FaultResult {
             fault_type,
@@ -230,11 +238,7 @@ impl<'a> FaultAnalyzer<'a> {
     /// Uses the radial-network approximation (series-impedance sum) for
     /// `Z₁`. Assumes `Z₂ = Z₁` and `Z₀ = 3·Z₁` (typical for systems with
     /// neutral grounding reactors).
-    pub fn calculate_fault_current(
-        &self,
-        bus: usize,
-        fault_type: FaultType,
-    ) -> FaultResult {
+    pub fn calculate_fault_current(&self, bus: usize, fault_type: FaultType) -> FaultResult {
         let z1 = self.z1_thevenin_radial(bus);
         let z2 = z1; // assumption
         let z0 = 3.0 * z1; // assumption; real systems vary
@@ -248,7 +252,11 @@ impl<'a> FaultAnalyzer<'a> {
             },
             FaultType::LineToLine => {
                 let i1 = pre_voltage / (z1 + z2);
-                SequenceCurrents { i1, i2: -i1, i0: 0.0 }
+                SequenceCurrents {
+                    i1,
+                    i2: -i1,
+                    i0: 0.0,
+                }
             }
             FaultType::LineToGround => {
                 let i1 = pre_voltage / (z1 + z2 + z0);
@@ -267,17 +275,13 @@ impl<'a> FaultAnalyzer<'a> {
 
         let i_fault_pu = match fault_type {
             FaultType::ThreePhase => seq.i1.abs(),
-            FaultType::LineToLine => ((3.0_f64).sqrt() * seq.i1.abs()),
-            FaultType::LineToGround => (3.0 * seq.i1.abs()),
-            FaultType::DoubleLineToGround => {
-                let a = (1.0 + 2.0 * seq.i2 / seq.i1).abs();
-                let b = (seq.i0 / seq.i1).abs();
-                3.0 * seq.i0.abs()
-            }
+            FaultType::LineToLine => (3.0_f64).sqrt() * seq.i1.abs(),
+            FaultType::LineToGround => 3.0 * seq.i1.abs(),
+            FaultType::DoubleLineToGround => 3.0 * seq.i0.abs(),
         };
 
-        let base_amps = self.system.base_mva * 1.0e6
-            / ((self.bus_base_kv(bus) * 1000.0) * (3.0_f64).sqrt());
+        let base_amps =
+            self.system.base_mva * 1.0e6 / ((self.bus_base_kv(bus) * 1000.0) * (3.0_f64).sqrt());
         let i_fault_amps = i_fault_pu * base_amps;
 
         FaultResult {
@@ -394,10 +398,8 @@ mod tests {
             .unwrap();
         sys.add_branch(Branch::new(1, "L12", 1, 2, 0.01, 0.10))
             .unwrap();
-        sys.add_generator(
-            Generator::new(1, "G1", GeneratorType::Thermal, 100.0, 0.0).at_bus(1),
-        )
-        .unwrap();
+        sys.add_generator(Generator::new(1, "G1", GeneratorType::Thermal, 100.0, 0.0).at_bus(1))
+            .unwrap();
         sys
     }
 
@@ -468,7 +470,8 @@ mod tests {
         assert!(
             (rdlg.i_fault_pu - expected).abs() < 1e-9,
             "DLG got {} expected {}",
-            rdlg.i_fault_pu, expected
+            rdlg.i_fault_pu,
+            expected
         );
     }
 

@@ -2,7 +2,7 @@
 
 use std::path::PathBuf;
 use tpt_nrg_core::EnergySystem;
-use tpt_nrg_powerflow::{PowerFlowError, PowerFlowMethod, PowerFlowSolver};
+use tpt_nrg_powerflow::{PowerFlowMethod, PowerFlowSolver};
 
 #[derive(serde::Deserialize)]
 struct Golden {

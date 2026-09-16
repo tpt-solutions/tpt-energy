@@ -1,4 +1,4 @@
-﻿//! # tpt-nrg-hydrogen
+//! # tpt-nrg-hydrogen
 //!
 //! Hydrogen storage: electrolyzer (electricity → H₂) and fuel cell
 //! (H₂ → electricity).
@@ -76,11 +76,7 @@ pub struct HydrogenSystem {
 
 impl HydrogenSystem {
     /// Construct a new hydrogen system.
-    pub fn new(
-        electrolyzer: Electrolyzer,
-        fuel_cell: FuelCell,
-        tank_capacity_kg: f64,
-    ) -> Self {
+    pub fn new(electrolyzer: Electrolyzer, fuel_cell: FuelCell, tank_capacity_kg: f64) -> Self {
         Self {
             electrolyzer,
             fuel_cell,

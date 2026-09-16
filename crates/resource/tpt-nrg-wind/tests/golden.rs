@@ -77,15 +77,15 @@ struct WakeSample {
 
 #[test]
 fn jensen_wake_deficit_matches_golden() {
-    let raw = std::fs::read_to_string(golden_path("jensen-wake-deficit.json"))
-        .expect("read wake golden");
+    let raw =
+        std::fs::read_to_string(golden_path("jensen-wake-deficit.json")).expect("read wake golden");
     let g: WakeGolden = serde_json::from_str(&raw).expect("parse wake golden");
     // Exercise the crate itself: a single upstream turbine wakes one
     // directly-aligned downstream turbine at each sample distance.
     for s in &g.downstream_samples_mps {
-        let turbine = WindTurbine::new("T", g.rotor_diameter_m, 2.0, 3.0, 12.0, 25.0);
-        let mut farm = WindFarm::new(WakeModel::JensenPark, 90.0)
-            .with_wake_decay(g.wake_decay_k);
+        let turbine = WindTurbine::new("T", g.rotor_diameter_m, 2.0, 3.0, 12.0, 25.0)
+            .with_thrust_coefficient(g.thrust_coefficient);
+        let mut farm = WindFarm::new(WakeModel::JensenPark, 90.0).with_wake_decay(g.wake_decay_k);
         farm.push(0.0, 0.0, turbine.clone());
         farm.push(s.distance_d_m, 0.0, turbine);
         let eff = farm.effective_wind_speeds(g.upstream_wind_speed_mps);

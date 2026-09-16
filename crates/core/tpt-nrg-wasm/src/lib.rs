@@ -36,8 +36,14 @@ impl std::fmt::Display for WasmError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             WasmError::Json(s) => write!(f, "json: {s}"),
-            WasmError::NonConvergence { iterations, mismatch } => {
-                write!(f, "non-convergence after {iterations} iters (mismatch={mismatch:.3e})")
+            WasmError::NonConvergence {
+                iterations,
+                mismatch,
+            } => {
+                write!(
+                    f,
+                    "non-convergence after {iterations} iters (mismatch={mismatch:.3e})"
+                )
             }
             WasmError::Other(s) => write!(f, "{s}"),
         }
@@ -98,8 +104,8 @@ pub struct MicrogridAsset {
 
 /// Run a Newton-Raphson power flow from a JSON `EnergySystem` string.
 pub fn run_powerflow_json(input: &str) -> Result<WasmPowerFlowResult, WasmError> {
-    let system = tpt_nrg_core::EnergySystem::from_json(input)
-        .map_err(|e| WasmError::Json(e.to_string()))?;
+    let system =
+        tpt_nrg_core::EnergySystem::from_json(input).map_err(|e| WasmError::Json(e.to_string()))?;
     let solver =
         tpt_nrg_powerflow::PowerFlowSolver::new(tpt_nrg_powerflow::PowerFlowMethod::NewtonRaphson);
     let result = solver
@@ -132,10 +138,10 @@ pub fn microgrid_step_json(
     controller_state_json: &str,
     measurements_json: &str,
 ) -> Result<String, WasmError> {
-    let _state: MicrogridState = serde_json::from_str(controller_state_json)
-        .map_err(|e| WasmError::Json(e.to_string()))?;
-    let _measurements: serde_json::Value = serde_json::from_str(measurements_json)
-        .map_err(|e| WasmError::Json(e.to_string()))?;
+    let _state: MicrogridState =
+        serde_json::from_str(controller_state_json).map_err(|e| WasmError::Json(e.to_string()))?;
+    let _measurements: serde_json::Value =
+        serde_json::from_str(measurements_json).map_err(|e| WasmError::Json(e.to_string()))?;
     let actions: Vec<ControlAction> = Vec::new();
     serde_json::to_string(&actions).map_err(|e| WasmError::Other(e.to_string()))
 }

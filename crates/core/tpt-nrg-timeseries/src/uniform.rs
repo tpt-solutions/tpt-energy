@@ -90,7 +90,10 @@ impl UniformTimeSeries {
     /// Maximum value.
     #[must_use]
     pub fn max(&self) -> f64 {
-        self.values.iter().copied().fold(f64::NEG_INFINITY, f64::max)
+        self.values
+            .iter()
+            .copied()
+            .fold(f64::NEG_INFINITY, f64::max)
     }
 
     /// Minimum value.

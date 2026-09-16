@@ -5,7 +5,7 @@ use tpt_nrg_core::{BusType, EnergySystem};
 use tpt_nrg_topology::AdmittanceMatrixBuilder;
 
 use crate::result::PowerFlowResult;
-use crate::solver::{PowerFlowError, PowerFlowMethod, PowerFlowOptions, PowerFlowSolver};
+use crate::solver::{PowerFlowError, PowerFlowOptions};
 use crate::util::{
     bus_index_map, bus_loads_mw, bus_schedules_pu, compute_branch_flows, find_slack,
     flat_start_voltages, net_injection_pu,
@@ -42,8 +42,8 @@ pub fn solve(
 
     // Variable ordering: angle of every non-slack bus, then |V| of every
     // non-slack PQ bus (PV buses have V fixed at the setpoint).
-    let mut angle_idx: Vec<usize> = (0..n).filter(|&i| i != slack).collect();
-    let mut v_idx: Vec<usize> = (0..n)
+    let angle_idx: Vec<usize> = (0..n).filter(|&i| i != slack).collect();
+    let v_idx: Vec<usize> = (0..n)
         .filter(|&i| i != slack && system.buses[i].bus_type == BusType::Pq)
         .collect();
     let n_theta = angle_idx.len();
@@ -116,8 +116,7 @@ pub fn solve(
                         let mut s = 0.0;
                         for kk2 in 0..n {
                             let dt2 = theta[i] - theta[kk2];
-                            s += v[kk2]
-                                * (g[i * n + kk2] * dt2.sin() - b[i * n + kk2] * dt2.cos());
+                            s += v[kk2] * (g[i * n + kk2] * dt2.sin() - b[i * n + kk2] * dt2.cos());
                         }
                         vi * s
                     };
@@ -125,8 +124,7 @@ pub fn solve(
                 } else {
                     // ∂P_i/∂θ_k = V_i V_k (G_ik sin θ_ik - B_ik cos θ_ik)
                     let vi = v[i];
-                    jac[ii * n_eq + col_of_theta(kk)] =
-                        vi * vk * (gik * dt.sin() - bik * dt.cos());
+                    jac[ii * n_eq + col_of_theta(kk)] = vi * vk * (gik * dt.sin() - bik * dt.cos());
                 }
             }
         }
@@ -143,8 +141,7 @@ pub fn solve(
                         let mut s = 0.0;
                         for kk2 in 0..n {
                             let dt2 = theta[i] - theta[kk2];
-                            s += v[kk2]
-                                * (g[i * n + kk2] * dt2.cos() + b[i * n + kk2] * dt2.sin());
+                            s += v[kk2] * (g[i * n + kk2] * dt2.cos() + b[i * n + kk2] * dt2.sin());
                         }
                         vi * s
                     };
@@ -168,8 +165,7 @@ pub fn solve(
                         let mut s = 0.0;
                         for kk2 in 0..n {
                             let dt2 = theta[i] - theta[kk2];
-                            s += v[kk2]
-                                * (g[i * n + kk2] * dt2.cos() + b[i * n + kk2] * dt2.sin());
+                            s += v[kk2] * (g[i * n + kk2] * dt2.cos() + b[i * n + kk2] * dt2.sin());
                         }
                         vi * s
                     };
@@ -194,8 +190,7 @@ pub fn solve(
                         let mut s = 0.0;
                         for kk2 in 0..n {
                             let dt2 = theta[i] - theta[kk2];
-                            s += v[kk2]
-                                * (g[i * n + kk2] * dt2.sin() - b[i * n + kk2] * dt2.cos());
+                            s += v[kk2] * (g[i * n + kk2] * dt2.sin() - b[i * n + kk2] * dt2.cos());
                         }
                         vi * s
                     };
@@ -264,8 +259,8 @@ pub fn solve(
         // conditioned systems like IEEE 57-bus avoid limit cycles while
         // still letting well-conditioned systems (IEEE 14, 30) converge in
         // the standard 3–7 iterations.
-        let max_angle_step = 0.2;   // ~11.5° per iteration
-        let max_v_step     = 0.05;  // 5% of rated per iteration
+        let max_angle_step = 0.2; // ~11.5° per iteration
+        let max_v_step = 0.05; // 5% of rated per iteration
         for (idx, &i) in angle_idx.iter().enumerate() {
             let step = dx[idx].clamp(-max_angle_step, max_angle_step);
             theta[i] += step;
@@ -403,7 +398,7 @@ fn solve_dense(n: usize, a_mat: &[f64], b: &[f64]) -> Vec<f64> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::solver::{PowerFlowMethod, PowerFlowSolver};
     use tpt_nrg_core::{Branch, Bus, BusType, EnergySystem, Generator, GeneratorType};
 
     fn two_bus() -> EnergySystem {
@@ -457,7 +452,11 @@ mod tests {
             .with_tolerance(1e-5)
             .with_max_iterations(50);
         let r = solver.solve(&sys).expect("solve ieee14");
-        assert!(r.converged, "did not converge: mismatch={}", r.final_mismatch);
+        assert!(
+            r.converged,
+            "did not converge: mismatch={}",
+            r.final_mismatch
+        );
         // Slack V at bus 1 ≈ 1.06 pu
         assert!((r.bus_voltage_magnitude_pu[0] - 1.06).abs() < 1e-3);
         // Reference voltage magnitudes for IEEE 14: all in 0.90 - 1.10 pu

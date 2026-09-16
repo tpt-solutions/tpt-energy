@@ -31,9 +31,10 @@ impl NetworkTopology {
             if !br.in_service {
                 continue;
             }
-            if let (Some(&i), Some(&j)) =
-                (bus_id_to_index.get(&br.from_bus), bus_id_to_index.get(&br.to_bus))
-            {
+            if let (Some(&i), Some(&j)) = (
+                bus_id_to_index.get(&br.from_bus),
+                bus_id_to_index.get(&br.to_bus),
+            ) {
                 adjacency[i].push((j, br.id));
                 adjacency[j].push((i, br.id));
             }
@@ -153,13 +154,14 @@ mod tests {
         sys.add_bus(Bus::new(2, "B2", BusType::Pq)).unwrap();
         sys.add_bus(Bus::new(3, "B3", BusType::Pq)).unwrap();
         sys.add_bus(Bus::new(4, "B4", BusType::Pq)).unwrap();
-        sys.add_branch(Branch::new(1, "L12", 1, 2, 0.01, 0.05)).unwrap();
-        sys.add_branch(Branch::new(2, "L23", 2, 3, 0.01, 0.05)).unwrap();
-        sys.add_branch(Branch::new(3, "L34", 3, 4, 0.01, 0.05)).unwrap();
-        sys.add_generator(
-            Generator::new(1, "G1", GeneratorType::Thermal, 100.0, 0.0).at_bus(1),
-        )
-        .unwrap();
+        sys.add_branch(Branch::new(1, "L12", 1, 2, 0.01, 0.05))
+            .unwrap();
+        sys.add_branch(Branch::new(2, "L23", 2, 3, 0.01, 0.05))
+            .unwrap();
+        sys.add_branch(Branch::new(3, "L34", 3, 4, 0.01, 0.05))
+            .unwrap();
+        sys.add_generator(Generator::new(1, "G1", GeneratorType::Thermal, 100.0, 0.0).at_bus(1))
+            .unwrap();
         sys
     }
 

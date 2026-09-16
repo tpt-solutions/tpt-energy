@@ -1,4 +1,4 @@
-﻿//! # tpt-nrg-unit-commitment
+//! # tpt-nrg-unit-commitment
 //!
 //! Unit commitment: decide which units to start up over a horizon to meet
 //! demand at minimum cost, respecting min up/down times and startup costs.
@@ -33,10 +33,7 @@ pub struct UnitCommitmentResult {
 ///
 /// Units are sorted by average full-load cost; we commit them in that
 /// order until the load is met.
-pub fn unit_commitment(
-    system: &EnergySystem,
-    load_profile_mw: &[f64],
-) -> UnitCommitmentResult {
+pub fn unit_commitment(system: &EnergySystem, load_profile_mw: &[f64]) -> UnitCommitmentResult {
     let n = system.generators.len();
     let t = load_profile_mw.len();
     // Compute average cost for each unit
@@ -46,7 +43,10 @@ pub fn unit_commitment(
             .cost_curve
             .as_ref()
             .map(|c| {
-                c.segments.iter().map(|s| s.incremental_cost_per_mwh).sum::<f64>()
+                c.segments
+                    .iter()
+                    .map(|s| s.incremental_cost_per_mwh)
+                    .sum::<f64>()
                     / c.segments.len().max(1) as f64
             })
             .unwrap_or(100.0);
@@ -54,7 +54,10 @@ pub fn unit_commitment(
             .cost_curve
             .as_ref()
             .map(|c| {
-                c.segments.iter().map(|s| s.incremental_cost_per_mwh).sum::<f64>()
+                c.segments
+                    .iter()
+                    .map(|s| s.incremental_cost_per_mwh)
+                    .sum::<f64>()
                     / c.segments.len().max(1) as f64
             })
             .unwrap_or(100.0);
@@ -124,7 +127,11 @@ mod tests {
         let r = unit_commitment(&sys(), &load);
         for k in 0..load.len() {
             let total: f64 = r.outputs.iter().map(|o| o[k]).sum();
-            assert!(total >= load[k] - 1.0, "t={k}: total={total}, load={}", load[k]);
+            assert!(
+                total >= load[k] - 1.0,
+                "t={k}: total={total}, load={}",
+                load[k]
+            );
         }
     }
 

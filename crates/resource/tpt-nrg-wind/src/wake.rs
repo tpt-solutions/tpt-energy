@@ -77,7 +77,7 @@ impl WindFarm {
                     continue;
                 }
                 let (xi, yi, _) = self.turbines[i];
-                let (xj, yj, _) = self.turbines[j];
+                let (xj, yj, ref upstream) = self.turbines[j];
                 // Vector from j to i
                 let dx = xi - xj;
                 let dy = yi - yj;
@@ -87,11 +87,11 @@ impl WindFarm {
                     continue;
                 }
                 let lateral = (dx * dir.cos() - dy * dir.sin()).abs();
-                let d = self.turbines[j].2.rotor_diameter_m;
+                let d = upstream.rotor_diameter_m;
                 let r = d * 0.5;
-                // Jensen / PARK wake: deficit = (1 - sqrt(1 - C_T)) * (D/(D+2k*down))^2
-                // assuming C_T = 0.8 (high-thrust, Betz-optimal region).
-                let ct: f64 = 0.8;
+                // Jensen / PARK wake: deficit = (1 - sqrt(1 - C_T)) * (D/(D+2k*down))^2,
+                // using the upstream turbine's own thrust coefficient.
+                let ct: f64 = upstream.thrust_coefficient;
                 let dw = d + 2.0 * self.wake_decay_k * down;
                 let deficit_axial = (1.0 - (1.0 - ct).sqrt()) * (d / dw).powi(2);
                 // Top-hat wake with radius r_w = D/2 + k*down: full deficit
@@ -120,11 +120,6 @@ impl WindFarm {
         // Convention: "direction toward which the wind is blowing" in
         // degrees clockwise from north.
         self.wind_direction_deg.to_radians()
-    }
-
-    #[cfg(test)]
-    fn dir_rad_for_test(&self) -> f64 {
-        self.wind_direction_rad()
     }
 }
 
@@ -178,7 +173,11 @@ mod tests {
         }
         let p_farm = farm.total_power_output(12.0);
         let p_single = turbine().power_at(12.0);
-        assert!(p_farm < 4.0 * p_single, "p_farm={p_farm}, 4*p={}", 4.0 * p_single);
+        assert!(
+            p_farm < 4.0 * p_single,
+            "p_farm={p_farm}, 4*p={}",
+            4.0 * p_single
+        );
         assert!(p_farm > 0.0);
     }
 }

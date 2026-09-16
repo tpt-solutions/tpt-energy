@@ -1,4 +1,4 @@
-﻿//! # tpt-nrg-thermal-storage
+//! # tpt-nrg-thermal-storage
 //!
 //! Thermal energy storage with state-of-charge tracking.
 
@@ -23,7 +23,11 @@ pub struct ThermalStorage {
 
 impl ThermalStorage {
     /// Construct a new thermal storage device.
-    pub fn new(energy_capacity_mwh_th: f64, power_rating_mw: f64, round_trip_efficiency: f64) -> Self {
+    pub fn new(
+        energy_capacity_mwh_th: f64,
+        power_rating_mw: f64,
+        round_trip_efficiency: f64,
+    ) -> Self {
         Self {
             energy_capacity_mwh_th,
             power_rating_mw,
@@ -57,8 +61,7 @@ impl ThermalStorage {
         let eta = self.round_trip_efficiency.sqrt();
         // Deliverable energy is the stored energy above min_soc scaled by
         // the discharge-leg efficiency, so SoC never drops below the floor.
-        let deliverable =
-            (self.soc - self.min_soc).max(0.0) * self.energy_capacity_mwh_th * eta;
+        let deliverable = (self.soc - self.min_soc).max(0.0) * self.energy_capacity_mwh_th * eta;
         let out_request = power * duration_h;
         let actual = out_request.min(deliverable).max(0.0);
         self.soc -= actual / eta / self.energy_capacity_mwh_th;

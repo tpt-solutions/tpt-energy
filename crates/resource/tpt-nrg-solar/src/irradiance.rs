@@ -63,17 +63,24 @@ pub fn clear_sky_irradiance(
     if !am.is_finite() || am <= 0.0 {
         return Irradiance::ZERO;
     }
-    // Ineichen clear-sky model
+    // Ineichen clear-sky model. Higher elevation means a shorter, thinner
+    // atmospheric path, so the optical-depth exponent is scaled down with a
+    // barometric pressure ratio (scale height ~8000 m).
     let a = 1.154;
     let b = -0.154;
     let c = (0.98 - 0.00146 * linke_turbidity).max(0.3);
-    let dni = a * e0 * (b * am).exp();
+    let pressure_ratio = (-altitude_m / 8000.0).exp();
+    let dni = a * e0 * (b * am * pressure_ratio).exp();
     let dni_capped = dni.max(0.0).min(1400.0);
 
     // Diffuse horizontal from Ineichen (simplified)
-    let dhi = 0.05 * e0 * (90.0 - zenith_deg).to_radians().sin().max(0.0)
+    let dhi = 0.05
+        * e0
+        * (90.0 - zenith_deg).to_radians().sin().max(0.0)
         * (-1.0 * (linke_turbidity - 1.0) / 8.0).exp();
-    let ghi = dni_capped * cos_zenith + dhi;
+    // `c` is the turbidity-derived atmospheric clearness factor applied to
+    // total global irradiance.
+    let ghi = (dni_capped * cos_zenith + dhi) * c;
 
     Irradiance {
         ghi_w_per_m2: ghi.max(0.0),
@@ -102,8 +109,7 @@ pub fn plane_of_array_irradiance(
     let sun_az = pos.azimuth_deg.to_radians();
     let sun_zen = pos.zenith_deg.to_radians();
     // Angle of incidence on tilted surface
-    let cos_aoi = (sun_zen.sin() * tilt.sin() * (sun_az - az).cos())
-        + (sun_zen.cos() * tilt.cos());
+    let cos_aoi = (sun_zen.sin() * tilt.sin() * (sun_az - az).cos()) + (sun_zen.cos() * tilt.cos());
     let beam = if cos_aoi > 0.0 {
         horiz.dni_w_per_m2 * cos_aoi
     } else {
@@ -130,9 +136,15 @@ mod tests {
     fn clear_sky_dni_positive_at_midday() {
         let pos = midday();
         let irrad = clear_sky_irradiance(&pos, 1600.0, 2.5);
-        eprintln!("alt={}, az={}, dni={}, ghi={}, dhi={}, am={}",
-            pos.altitude_deg, pos.azimuth_deg,
-            irrad.dni_w_per_m2, irrad.ghi_w_per_m2, irrad.dhi_w_per_m2, pos.air_mass);
+        eprintln!(
+            "alt={}, az={}, dni={}, ghi={}, dhi={}, am={}",
+            pos.altitude_deg,
+            pos.azimuth_deg,
+            irrad.dni_w_per_m2,
+            irrad.ghi_w_per_m2,
+            irrad.dhi_w_per_m2,
+            pos.air_mass
+        );
         // Expected: ~900-1050 W/m² for DNI at solar noon in summer.
         assert!(irrad.dni_w_per_m2 > 600.0, "dni = {}", irrad.dni_w_per_m2);
         assert!(irrad.ghi_w_per_m2 > 400.0, "ghi = {}", irrad.ghi_w_per_m2);

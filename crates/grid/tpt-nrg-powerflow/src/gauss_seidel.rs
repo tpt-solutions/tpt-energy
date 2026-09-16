@@ -73,8 +73,8 @@ pub fn solve(
             } else {
                 v[i] * theta[i].sin()
             };
-            let mut vnew = (vnew_re * vnew_re + vnew_im * vnew_im).sqrt();
-            let mut thetanew = vnew_im.atan2(vnew_re);
+            let vnew = (vnew_re * vnew_re + vnew_im * vnew_im).sqrt();
+            let thetanew = vnew_im.atan2(vnew_re);
             // Apply acceleration
             v[i] = v[i] + accel * (vnew - v[i]);
             theta[i] = theta[i] + accel * (thetanew - theta[i]);
