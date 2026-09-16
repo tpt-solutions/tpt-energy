@@ -1,5 +1,5 @@
 {
-  "description": "Reference SoC trajectory for tpt-nrg-battery: 100 MWh / 50 MW / 90% round-trip Li-ion, starting at 50% SoC, three cycles of charge-discharge. Used as integration test golden.",
+  "description": "Reference SoC trajectory for tpt-nrg-battery: 100 MWh / 50 MW / 90% round-trip Li-ion, starting at 50% SoC, three cycles of charge-discharge. Round-trip efficiency is split as sqrt(0.9) on each leg: discharge draws extra stored energy so that out/in = 0.9 over a full cycle. Used as integration test golden.",
   "config": {
     "energy_capacity_mwh": 100.0,
     "power_rating_mw": 50.0,
@@ -19,14 +19,14 @@
       "action": "discharge",
       "duration_h": 1.0,
       "power_mw": 50.0,
-      "expected_soc_after": 0.474,
+      "expected_soc_after": 0.447,
       "expected_throughput_mwh_delta": 50.0
     },
     {
       "action": "charge",
       "duration_h": 1.0,
       "power_mw": 50.0,
-      "expected_soc_after": 0.949,
+      "expected_soc_after": 0.922,
       "expected_throughput_mwh_delta": 50.0
     }
   ],

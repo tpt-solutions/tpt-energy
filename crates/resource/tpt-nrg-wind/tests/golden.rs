@@ -80,18 +80,29 @@ fn jensen_wake_deficit_matches_golden() {
     let raw = std::fs::read_to_string(golden_path("jensen-wake-deficit.json"))
         .expect("read wake golden");
     let g: WakeGolden = serde_json::from_str(&raw).expect("parse wake golden");
+    // Exercise the crate itself: a single upstream turbine wakes one
+    // directly-aligned downstream turbine at each sample distance.
     for s in &g.downstream_samples_mps {
-        let dw = g.rotor_diameter_m + 2.0 * g.wake_decay_k * s.distance_d_m;
-        let factor = 1.0 - (1.0 - g.thrust_coefficient * (g.rotor_diameter_m / dw).powi(2))
-            .max(0.0_f64)
-            .sqrt();
-        let expected_v = g.upstream_wind_speed_mps * (1.0 - factor);
+        let turbine = WindTurbine::new("T", g.rotor_diameter_m, 2.0, 3.0, 12.0, 25.0);
+        let mut farm = WindFarm::new(WakeModel::JensenPark, 90.0)
+            .with_wake_decay(g.wake_decay_k);
+        farm.push(0.0, 0.0, turbine.clone());
+        farm.push(s.distance_d_m, 0.0, turbine);
+        let eff = farm.effective_wind_speeds(g.upstream_wind_speed_mps);
         assert!(
-            (expected_v - s.v_downstream_mps).abs() < g.tolerance_abs,
+            (eff[1] - s.v_downstream_mps).abs() < g.tolerance_abs,
             "d = {}: v = {}, want {}",
             s.distance_d_m,
-            expected_v,
+            eff[1],
             s.v_downstream_mps
+        );
+        let deficit = 1.0 - eff[1] / g.upstream_wind_speed_mps;
+        assert!(
+            (deficit - s.deficit_factor).abs() < g.tolerance_abs,
+            "d = {}: deficit = {}, want {}",
+            s.distance_d_m,
+            deficit,
+            s.deficit_factor
         );
     }
     // Verify farm-level: two turbines 5D apart with Jensen.
@@ -105,4 +116,17 @@ fn jensen_wake_deficit_matches_golden() {
     // Downstream should be slower than upstream.
     assert!(eff[1] < eff[0] - 0.1);
     assert!(eff[1] > 0.0);
+}
+
+#[test]
+fn unimplemented_wake_models_are_loud() {
+    let turbine = WindTurbine::new("T", 80.0, 2.0, 3.0, 12.0, 25.0);
+    let mut farm = WindFarm::new(WakeModel::Frandsen, 90.0);
+    farm.push(0.0, 0.0, turbine);
+    // Frandsen/EddyViscosity are not implemented: panic loudly rather than
+    // silently computing a Jensen result.
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        farm.effective_wind_speeds(10.0);
+    }));
+    assert!(result.is_err(), "unimplemented wake model must panic");
 }

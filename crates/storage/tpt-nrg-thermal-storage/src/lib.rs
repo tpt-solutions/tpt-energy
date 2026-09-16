@@ -54,11 +54,14 @@ impl ThermalStorage {
     /// Discharge: deliver `power_mw` for `duration_h`. Returns energy out.
     pub fn discharge(&mut self, power_mw: f64, duration_h: f64) -> f64 {
         let power = power_mw.max(0.0).min(self.power_rating_mw);
-        let available = (self.soc - self.min_soc) * self.energy_capacity_mwh_th;
+        let eta = self.round_trip_efficiency.sqrt();
+        // Deliverable energy is the stored energy above min_soc scaled by
+        // the discharge-leg efficiency, so SoC never drops below the floor.
+        let deliverable =
+            (self.soc - self.min_soc).max(0.0) * self.energy_capacity_mwh_th * eta;
         let out_request = power * duration_h;
-        let actual = out_request.min(available).max(0.0);
-        let stored_needed = actual / self.round_trip_efficiency.sqrt();
-        self.soc -= stored_needed / self.energy_capacity_mwh_th;
+        let actual = out_request.min(deliverable).max(0.0);
+        self.soc -= actual / eta / self.energy_capacity_mwh_th;
         actual
     }
 }
@@ -80,9 +83,11 @@ mod tests {
     #[test]
     fn discharge_limited_by_soc() {
         let mut t = ThermalStorage::new(100.0, 50.0, 0.8).with_soc_bounds(0.1, 0.3);
-        // Available: (0.3-0.1)*100 = 20 MWh
-        // Discharge 50 MW for 1h = 50 MWh requested; but limited to 20.
+        // Deliverable: (0.3-0.1)*100*sqrt(0.8) = 17.889 MWh
+        // Discharge 50 MW for 1h = 50 MWh requested; limited to 17.889.
         let out = t.discharge(50.0, 1.0);
-        assert!((out - 20.0).abs() < 1e-6);
+        assert!((out - 17.8885).abs() < 1e-3, "out = {out}");
+        // SoC must land exactly on the floor, never below it.
+        assert!((t.soc - 0.1).abs() < 1e-9, "soc = {}", t.soc);
     }
 }

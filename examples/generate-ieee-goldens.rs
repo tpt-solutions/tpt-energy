@@ -14,7 +14,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ieee_dir = data_root.join("ieee");
     let golden_dir = data_root.join("golden").join("powerflow");
 
-    for (case, out_name) in [("ieee30.json", "ieee-30-bus.json"), ("ieee57.json", "ieee-57-bus.json")] {
+    for (case, out_name) in [
+        ("ieee14.json", "ieee-14-bus.json"),
+        ("ieee30.json", "ieee-30-bus.json"),
+        ("ieee57.json", "ieee-57-bus.json"),
+    ] {
         let path = ieee_dir.join(case);
         if !path.exists() {
             eprintln!("skip {}: input file missing at {}", case, path.display());
@@ -45,7 +49,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let json = serde_json::json!({
             "case": case_id,
-            "description": format!("IEEE {} power flow golden values (Newton-Raphson, tolerance 1e-9). Generator values are in MW.", case_id.to_uppercase()),
+            "description": format!("IEEE {} power flow golden values (solver-generated reference; regenerate with `cargo run --bin generate-ieee-goldens`). Generator values are in MW.", case_id.to_uppercase()),
             "converged": result.converged,
             "iterations": result.iterations,
             "final_mismatch": result.final_mismatch,

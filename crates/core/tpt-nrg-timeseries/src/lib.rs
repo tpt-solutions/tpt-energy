@@ -31,6 +31,10 @@ pub enum TimeSeriesError {
     /// The requested resample step is non-positive.
     #[error("resample step must be > 0 (got {0})")]
     InvalidStep(f64),
+    /// The requested resample step is not an integer multiple (or divisor)
+    /// of the current step, so the sample grid cannot be mapped exactly.
+    #[error("resample step {0} s is not an integer multiple or divisor of the current step")]
+    IncommensurateStep(f64),
 }
 
 /// Result alias for `tpt-nrg-timeseries`.

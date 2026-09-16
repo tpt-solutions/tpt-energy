@@ -33,17 +33,12 @@ pub fn solve(system: &EnergySystem) -> Result<PowerFlowResult, PowerFlowError> {
             if i == slack {
                 continue;
             }
-            // B'[i,j] = -B[i,j] for off-diagonals; -sum_k B[i,k] for diagonal
+            // B'[i,j] = -B[i,j] for off-diagonals; -B[i,i] for the diagonal.
+            // The diagonal must be the full row sum (-B_ii), including the
+            // slack row/column that was removed — excluding it silently
+            // corrupts every angle in systems with more than two buses.
             if i == j {
-                let mut sum = 0.0;
-                for k in 0..n {
-                    if k == slack {
-                        continue;
-                    }
-                    // Approximate "removed" element by ignoring it
-                    sum += y.b_ij(i, k);
-                }
-                b_red[row * n_red + col] = -sum;
+                b_red[row * n_red + col] = -y.b_ij(i, i);
             } else {
                 b_red[row * n_red + col] = -y.b_ij(i, j);
             }

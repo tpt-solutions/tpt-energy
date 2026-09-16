@@ -36,7 +36,13 @@ impl HydroPlant {
     /// `P [W] = ρ · g · Q · H · η` with ρ = 1000 kg/m³, g = 9.81 m/s².
     /// 1 MW = 1e6 W.
     pub fn power_output_mw(&self, flow_m3s: f64) -> f64 {
-        let q = flow_m3s.clamp(self.min_flow_m3s, self.max_flow_m3s);
+        // Below minimum turbine flow the unit is off (shut down, or
+        // spilling environmentally-required flow): no generation. Clamping
+        // up to `min_flow` would fabricate power out of a stopped unit.
+        if flow_m3s < self.min_flow_m3s {
+            return 0.0;
+        }
+        let q = flow_m3s.min(self.max_flow_m3s);
         1000.0 * 9.81 * q * self.net_head_m * self.efficiency / 1.0e6
     }
 }
@@ -66,5 +72,15 @@ mod tests {
     fn zero_flow_zero_power() {
         let p = HydroPlant::new(50.0, 0.90, 100.0);
         assert_eq!(p.power_output_mw(0.0), 0.0);
+    }
+
+    #[test]
+    fn below_min_flow_unit_is_off() {
+        let mut p = HydroPlant::new(50.0, 0.90, 100.0);
+        p.min_flow_m3s = 5.0;
+        // A shut-down unit (or one spilling env flow) must not generate.
+        assert_eq!(p.power_output_mw(3.0), 0.0);
+        assert_eq!(p.power_output_mw(-2.0), 0.0);
+        assert!(p.power_output_mw(5.0) > 0.0);
     }
 }

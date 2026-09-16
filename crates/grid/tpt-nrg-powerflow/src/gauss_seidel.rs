@@ -6,7 +6,8 @@ use tpt_nrg_topology::AdmittanceMatrixBuilder;
 use crate::result::PowerFlowResult;
 use crate::solver::{PowerFlowError, PowerFlowOptions};
 use crate::util::{
-    bus_index_map, bus_schedules_pu, compute_branch_flows, find_slack, flat_start_voltages,
+    bus_index_map, bus_loads_mw, bus_schedules_pu, compute_branch_flows, find_slack,
+    flat_start_voltages, net_injection_pu,
 };
 
 /// Solve the AC power flow using the Gauss–Seidel method with optional
@@ -98,6 +99,14 @@ pub fn solve(
             } else {
                 (q_sched[i] - q_inj).abs()
             };
+            // A non-finite mismatch means the iteration diverged; f64::max
+            // would silently swallow NaN and report false convergence.
+            if !dp.is_finite() || !dq.is_finite() {
+                return Err(PowerFlowError::NonConvergence {
+                    iterations,
+                    mismatch: f64::NAN,
+                });
+            }
             max_mis = max_mis.max(dp).max(dq);
         }
         final_mismatch = max_mis;
@@ -107,31 +116,32 @@ pub fn solve(
     }
 
     let flows = compute_branch_flows(system, &y_bus, &v, &theta);
+    // Each branch's p_from + p_to is its series loss (shunt B is lossless),
+    // so the sum over all branches is the total system loss.
     let mut total_p = 0.0;
     let mut total_q = 0.0;
     for f in &flows {
         total_p += f.p_from_mw + f.p_to_mw;
         total_q += f.q_from_mvar + f.q_to_mvar;
     }
-    let total_losses_mw = 0.5 * total_p;
-    let total_losses_mvar = 0.5 * total_q;
+    let total_losses_mw = total_p;
+    let total_losses_mvar = total_q;
 
     let mut gen_p = vec![0.0_f64; system.generators.len()];
     let mut gen_q = vec![0.0_f64; system.generators.len()];
     let map = bus_index_map(system);
+    let (load_p, load_q) = bus_loads_mw(system);
     for (k, g) in system.generators.iter().enumerate() {
         if !g.in_service {
             continue;
         }
         if let Some(Some(bi)) = map.get(g.bus_id) {
-            gen_p[k] = p_sched[*bi] * system.base_mva;
-            let mut q_inj = 0.0;
-            let vi = v[*bi];
-            for kk in 0..n {
-                let dt = theta[*bi] - theta[kk];
-                q_inj += v[kk] * (y_bus.g_ij(*bi, kk) * dt.sin() - y_bus.b_ij(*bi, kk) * dt.cos());
-            }
-            gen_q[k] = q_inj * vi * system.base_mva;
+            // Generator output = solved net bus injection + bus load; at the
+            // slack bus the injection is the solved value.
+            let (p_inj, q_inj) = net_injection_pu(&y_bus, &v, &theta, *bi);
+            let p_bus_pu = if *bi == slack { p_inj } else { p_sched[*bi] };
+            gen_p[k] = p_bus_pu * system.base_mva + load_p[*bi];
+            gen_q[k] = q_inj * system.base_mva + load_q[*bi];
         }
     }
 

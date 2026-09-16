@@ -69,12 +69,23 @@ impl SolarModel {
         // Altitude and azimuth
         let lat = self.latitude_deg.to_radians();
         let sin_alt = lat.sin() * delta.sin() + lat.cos() * delta.cos() * hour_angle_rad.cos();
-        let altitude_rad = sin_alt.asin();
-        let cos_az = (delta.sin() - sin_alt * lat.sin()) / (altitude_rad.cos() * lat.cos());
-        let mut azimuth_rad = cos_az.acos();
-        if hour_angle_rad > 0.0 {
-            azimuth_rad = 2.0 * std::f64::consts::PI - azimuth_rad;
-        }
+        // Clamp guards against |sin_alt| marginally exceeding 1 from float
+        // rounding, which would make asin return NaN.
+        let altitude_rad = sin_alt.clamp(-1.0, 1.0).asin();
+        let az_denom = altitude_rad.cos() * lat.cos();
+        let azimuth_rad = if az_denom.abs() < 1e-9 {
+            // Sun within float-epsilon of the zenith (tropical sites) or a
+            // polar site: azimuth is numerically undefined; report north.
+            0.0
+        } else {
+            let cos_az = ((delta.sin() - sin_alt * lat.sin()) / az_denom).clamp(-1.0, 1.0);
+            let az = cos_az.acos();
+            if hour_angle_rad > 0.0 {
+                2.0 * std::f64::consts::PI - az
+            } else {
+                az
+            }
+        };
 
         // Atmospheric refraction (Saemundsson) — altitude in degrees, output
         // in arcminutes.
@@ -175,6 +186,21 @@ mod tests {
 
     fn at(hour: u32) -> DateTime<Utc> {
         Utc.with_ymd_and_hms(2026, 6, 21, hour, 0, 0).unwrap()
+    }
+
+    #[test]
+    fn azimuth_is_finite_near_zenith() {
+        // Tropical site (23.45°N) at local solar noon on the June solstice:
+        // the sun is within a fraction of a degree of the zenith, where the
+        // naive acos formula divides by ~0 and returns NaN.
+        let m = SolarModel::new(23.45, 0.0, 0.0, 0.0);
+        let pos = m.solar_position(at(12));
+        assert!(
+            pos.azimuth_deg.is_finite(),
+            "azimuth = {}",
+            pos.azimuth_deg
+        );
+        assert!(pos.altitude_deg > 89.0);
     }
 
     #[test]

@@ -92,11 +92,23 @@ pub fn transition_to_island(
     nominal_frequency_hz: f64,
 ) -> TransitionResult {
     let net = available_generation_mw + storage_available_mw - total_load_mw;
-    if net >= 0.0 {
+    if available_generation_mw >= total_load_mw {
+        // Generation alone covers the load: keep storage in reserve.
         return TransitionResult {
             success: true,
             load_shed_mw: 0.0,
-            storage_dispatch_mw: net.min(storage_available_mw),
+            storage_dispatch_mw: 0.0,
+            new_voltage_pu: nominal_voltage_pu,
+            new_frequency_hz: nominal_frequency_hz,
+        };
+    }
+    if net >= 0.0 {
+        // Generation is short; storage covers exactly the shortfall.
+        let shortfall = total_load_mw - available_generation_mw;
+        return TransitionResult {
+            success: true,
+            load_shed_mw: 0.0,
+            storage_dispatch_mw: shortfall.min(storage_available_mw),
             new_voltage_pu: nominal_voltage_pu,
             new_frequency_hz: nominal_frequency_hz,
         };
@@ -149,7 +161,11 @@ pub fn resynchronize(
     freq_tolerance_hz: f64,
 ) -> SyncResult {
     let v_err = (v_microgrid - v_grid).abs();
-    let a_err = (angle_microgrid - angle_grid).abs();
+    // Angles are cyclic: wrap the error onto [0, π] so that e.g. a
+    // freewheeling island at 2π vs the grid at 0 matches.
+    let two_pi = 2.0 * std::f64::consts::PI;
+    let raw_a_err = (angle_microgrid - angle_grid).abs() % two_pi;
+    let a_err = raw_a_err.min(two_pi - raw_a_err);
     let f_err = (freq_microgrid - freq_grid).abs();
     SyncResult {
         success: v_err < v_tolerance_pu
@@ -213,5 +229,33 @@ mod tests {
     fn resync_mismatch() {
         let r = resynchronize(1.1, 1.0, 0.0, 0.0, 60.0, 60.0, 0.05, 0.05, 0.1);
         assert!(!r.success);
+    }
+
+    #[test]
+    fn resync_wraps_angle_error() {
+        // 2π vs 0 is the same phase: must sync, not report a ~6.28 rad error.
+        let r = resynchronize(
+            1.0, 1.0, 2.0 * std::f64::consts::PI, 0.0, 60.0, 60.0, 0.05, 0.05, 0.1,
+        );
+        assert!(r.success, "angle error = {}", r.angle_error_rad);
+        assert!(r.angle_error_rad.abs() < 1e-9);
+    }
+
+    #[test]
+    fn transition_storage_covers_exact_shortfall() {
+        // Load 10, gen 8, storage 3: exactly 2 MW must come from storage.
+        let r = transition_to_island(10.0, 8.0, 3.0, 1.0, 60.0);
+        assert!(r.success);
+        assert_eq!(r.load_shed_mw, 0.0);
+        assert!((r.storage_dispatch_mw - 2.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn transition_surplus_keeps_storage_in_reserve() {
+        // Load 5, gen 10, storage 3: generation alone covers the load.
+        let r = transition_to_island(5.0, 10.0, 3.0, 1.0, 60.0);
+        assert!(r.success);
+        assert_eq!(r.load_shed_mw, 0.0);
+        assert_eq!(r.storage_dispatch_mw, 0.0);
     }
 }

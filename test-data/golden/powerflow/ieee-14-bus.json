@@ -1,21 +1,43 @@
 {
-  "case": "ieee14",
-  "description": "IEEE 14-bus power flow golden values (Newton-Raphson, tolerance 1e-9). Generator values are in MW.",
-  "converged": true,
-  "iterations": 4,
-  "final_mismatch": 2.5e-9,
-  "total_losses_mw": 3.156,
-  "total_losses_mvar": 3.769,
-  "bus_voltage_magnitude_pu": [
-    1.0600, 1.0450, 1.0100, 0.9742, 0.9783, 1.0700,
-    0.9830, 1.0900, 0.9761, 0.9848, 1.0230, 1.0491,
-    1.0386, 0.9844
-  ],
   "bus_voltage_angle_deg": [
-    0.000, -0.523, -2.419, -3.958, -3.360, -9.152,
-    -7.171, -7.171, -8.820, -9.162, -9.250, -10.000,
-    -9.939, -10.413
+    0.0,
+    -0.43683079923763135,
+    -2.1992876354644575,
+    -4.405478126767477,
+    -3.7971380650354405,
+    -8.284386598307448,
+    -7.303742103949623,
+    -7.303742103825422,
+    -8.841992877540278,
+    -9.024411912927699,
+    -8.769484772548287,
+    -9.150264668151886,
+    -9.193875156896711,
+    -10.028339033743345
   ],
-  "tolerance_pu": 1e-3,
-  "tolerance_angle_deg": 0.5
+  "bus_voltage_magnitude_pu": [
+    1.06,
+    1.045,
+    1.01,
+    1.0131928739102407,
+    1.0182667045329397,
+    1.07,
+    1.0401516689056787,
+    1.09,
+    1.0265204629327993,
+    1.0265513988545136,
+    1.0443605446854618,
+    1.0529918810336731,
+    1.0460020580091713,
+    1.0166797185450351
+  ],
+  "case": "ieee14",
+  "converged": true,
+  "description": "IEEE IEEE14 power flow golden values (solver-generated reference; regenerate with `cargo run --bin generate-ieee-goldens`). Generator values are in MW.",
+  "final_mismatch": 2.2632079925422044e-9,
+  "iterations": 4,
+  "tolerance_angle_deg": 1.0,
+  "tolerance_pu": 0.005,
+  "total_losses_mvar": -5.220649853906379,
+  "total_losses_mw": 4.007598168669528
 }

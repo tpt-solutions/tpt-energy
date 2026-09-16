@@ -68,14 +68,30 @@ pub fn economic_dispatch(
         p_min.push(g.p_min_mw);
         p_max.push(g.p_max_mw);
     }
-    // Sort units by marginal cost ascending
+    // Feasibility: units without a cost curve are must-runs fixed at p_min.
+    let min_generation_mw: f64 = (0..n).filter(|&i| !has_curve[i]).map(|i| p_min[i]).sum();
+    if system_load_mw < min_generation_mw - 1e-9 {
+        return Err(DispatchError::LoadBelowMinimum {
+            load_mw: system_load_mw,
+            min_generation_mw,
+        });
+    }
+    let dispatchable_max_mw: f64 = (0..n)
+        .map(|i| if has_curve[i] { p_max[i] } else { p_min[i] })
+        .sum();
+    if system_load_mw > dispatchable_max_mw + 1e-9 {
+        return Err(DispatchError::InsufficientCapacity {
+            load_mw: system_load_mw,
+            capacity_mw: dispatchable_max_mw,
+        });
+    }
+    // Sort units by marginal cost ascending (total_cmp is NaN-safe).
     let mut order: Vec<usize> = (0..n).collect();
-    order.sort_by(|&a, &b| c[a].partial_cmp(&c[b]).unwrap());
+    order.sort_by(|&a, &b| c[a].total_cmp(&c[b]));
     // Walk up the merit order, committing each unit up to its max until the
     // load is met; the marginal unit is partially loaded.
     let mut outputs = vec![0.0_f64; n];
     let mut remaining = system_load_mw;
-    let mut marginal_unit: Option<usize> = None;
     let mut lambda = 0.0;
     for &i in &order {
         if remaining <= 0.0 {
@@ -87,10 +103,14 @@ pub fn economic_dispatch(
             continue;
         }
         // Use the unit's full range, not just the headroom above p_min.
+        // The system marginal price is the incremental cost of the most
+        // expensive unit that is dispatched, whether partially or fully
+        // loaded. Setting λ before either branch also covers the boundary
+        // case where the load exactly equals the committed units' maxima.
+        lambda = c[i];
         if remaining <= p_max[i] - 1e-6 {
             // Marginal unit — partial output
             outputs[i] = remaining;
-            lambda = c[i];
             remaining = 0.0;
         } else {
             // Fully commit
@@ -98,19 +118,11 @@ pub fn economic_dispatch(
             remaining -= p_max[i];
         }
     }
-    if remaining > 1e-3 {
-        // Insufficient capacity
-        for i in 0..n {
-            outputs[i] = p_max[i];
-        }
-        lambda = c[order.last().copied().unwrap_or(0)];
-    }
     let total_cost: f64 = outputs
         .iter()
         .zip(c.iter())
         .map(|(p, ci)| p * ci)
         .sum();
-    let _ = marginal_unit;
     Ok(EconomicDispatchResult {
         generator_outputs_mw: outputs,
         total_cost_dollar_per_h: total_cost,
@@ -167,36 +179,28 @@ pub fn storage_arbitrage(
     plan
 }
 
-fn build_result(
-    outputs: &[f64],
-    lambda: f64,
-    c: &[f64],
-    _system: &EnergySystem,
-) -> Result<EconomicDispatchResult, DispatchError> {
-    let total: f64 = outputs.iter().sum();
-    let total_cost: f64 = outputs
-        .iter()
-        .zip(c.iter())
-        .map(|(p, ci)| p * ci)
-        .sum();
-    Ok(EconomicDispatchResult {
-        generator_outputs_mw: outputs.to_vec(),
-        total_cost_dollar_per_h: total_cost,
-        marginal_cost_dollar_per_mwh: lambda,
-        losses_mw: 0.0,
-    })
-    .map(|mut r| {
-        let _ = total;
-        r
-    })
-}
-
 /// Errors raised by the dispatch solver.
 #[derive(Debug, thiserror::Error)]
 pub enum DispatchError {
     /// No generators in the system.
     #[error("no generators available for dispatch")]
     NoGenerators,
+    /// System load exceeds the total dispatchable capacity.
+    #[error("load {load_mw:.1} MW exceeds dispatchable capacity {capacity_mw:.1} MW")]
+    InsufficientCapacity {
+        /// Requested system load in MW.
+        load_mw: f64,
+        /// Total dispatchable capacity in MW.
+        capacity_mw: f64,
+    },
+    /// System load is below the must-run minimum generation.
+    #[error("load {load_mw:.1} MW is below must-run minimum generation {min_generation_mw:.1} MW")]
+    LoadBelowMinimum {
+        /// Requested system load in MW.
+        load_mw: f64,
+        /// Sum of must-run p_min in MW.
+        min_generation_mw: f64,
+    },
 }
 
 #[cfg(test)]
@@ -240,9 +244,8 @@ mod tests {
 
     #[test]
     fn dispatch_load_200mw() {
-        // For 200 MW: G1 max 100, G2 max 150.  G1+G2_min = 50. So we need
-        // 200 MW. G1=100, G2=100. Lambda = 30 (highest marginal that any
-        // unit is dispatched at).
+        // For 200 MW: G1 max 100, G2 max 150. G1=100, G2=100. Lambda = 37.5
+        // (G2's slope — the most expensive unit that is dispatched).
         let r = economic_dispatch(&three_gen_system(), 200.0).unwrap();
         let total: f64 = r.generator_outputs_mw.iter().sum();
         assert!((total - 200.0).abs() < 0.5, "total = {total}");
@@ -255,6 +258,41 @@ mod tests {
         // Lambda = slope of G2's cost curve = 37.5.
         assert!((r.marginal_cost_dollar_per_mwh - 37.5).abs() < 1.0,
             "lambda = {}", r.marginal_cost_dollar_per_mwh);
+    }
+
+    #[test]
+    fn infeasible_load_is_an_error() {
+        // Σ p_max = 100 + 150 + 200 = 450 MW.
+        let r = economic_dispatch(&three_gen_system(), 500.0);
+        assert!(
+            matches!(
+                r,
+                Err(DispatchError::InsufficientCapacity { load_mw, capacity_mw })
+                    if load_mw == 500.0 && (capacity_mw - 450.0).abs() < 1e-9
+            ),
+            "expected InsufficientCapacity, got {r:?}"
+        );
+    }
+
+    #[test]
+    fn load_below_must_run_minimum_is_an_error() {
+        let mut sys = EnergySystem::new("ed2", "ED2", 100.0, 60.0);
+        sys.add_bus(tpt_nrg_core::Bus::new(
+            1,
+            "B1",
+            tpt_nrg_core::BusType::Pv,
+        ))
+        .unwrap();
+        // No cost curve → must-run at p_min = 50 MW.
+        sys.add_generator(
+            Generator::new(1, "G1", GeneratorType::Nuclear, 400.0, 50.0).at_bus(1),
+        )
+        .unwrap();
+        let r = economic_dispatch(&sys, 30.0);
+        assert!(
+            matches!(r, Err(DispatchError::LoadBelowMinimum { .. })),
+            "expected LoadBelowMinimum, got {r:?}"
+        );
     }
 
     #[test]

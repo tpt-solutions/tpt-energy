@@ -1,27 +1,42 @@
 //! Golden-value validation for battery SoC cycling.
+//!
+//! Reads `test-data/golden/storage/battery-soc-cycling.json` and replays the
+//! charge/discharge schedule against [`BatteryStorage`], checking the SoC
+//! after every step and the cumulative-throughput delta.
 
 use std::path::PathBuf;
 use tpt_nrg_battery::BatteryStorage;
 
+/// Full golden fixture layout.
 #[derive(serde::Deserialize)]
 struct Golden {
+    config: Config,
+    cycles: Vec<Cycle>,
+    tolerance: Tolerance,
+}
+
+#[derive(serde::Deserialize)]
+struct Config {
     energy_capacity_mwh: f64,
     power_rating_mw: f64,
     round_trip_efficiency: f64,
     min_soc: f64,
     initial_soc: f64,
-    steps: Vec<Step>,
 }
 
 #[derive(serde::Deserialize)]
-struct Step {
-    op: String,
-    power_mw: f64,
+struct Cycle {
+    action: String,
     duration_h: f64,
-    expected_out_mwh: Option<f64>,
-    expected_stored_mwh: Option<f64>,
+    power_mw: f64,
     expected_soc_after: f64,
-    tolerance: f64,
+    expected_throughput_mwh_delta: f64,
+}
+
+#[derive(serde::Deserialize)]
+struct Tolerance {
+    soc_abs: f64,
+    throughput_abs: f64,
 }
 
 fn golden_path() -> PathBuf {
@@ -40,39 +55,34 @@ fn battery_soc_cycling_matches_golden() {
     let raw = std::fs::read_to_string(golden_path()).expect("read battery golden");
     let g: Golden = serde_json::from_str(&raw).expect("parse battery golden");
     let mut b = BatteryStorage::new(
-        g.energy_capacity_mwh,
-        g.power_rating_mw,
-        g.round_trip_efficiency,
+        g.config.energy_capacity_mwh,
+        g.config.power_rating_mw,
+        g.config.round_trip_efficiency,
     )
-    .with_soc(g.min_soc, g.initial_soc);
+    .with_soc(g.config.min_soc, g.config.initial_soc);
 
-    for (i, step) in g.steps.iter().enumerate() {
-        match step.op.as_str() {
-            "discharge" => {
-                let out = b.discharge(step.power_mw, step.duration_h).expect("discharge");
-                if let Some(want) = step.expected_out_mwh {
-                    assert!(
-                        (out - want).abs() < step.tolerance,
-                        "step {i}: out = {out}, want {want}"
-                    );
-                }
-            }
+    for (i, cyc) in g.cycles.iter().enumerate() {
+        let throughput_before = b.cumulative_throughput_mwh;
+        match cyc.action.as_str() {
             "charge" => {
-                let stored = b.charge(step.power_mw, step.duration_h).expect("charge");
-                if let Some(want) = step.expected_stored_mwh {
-                    assert!(
-                        (stored - want).abs() < step.tolerance,
-                        "step {i}: stored = {stored}, want {want}"
-                    );
-                }
+                b.charge(cyc.power_mw, cyc.duration_h).expect("charge");
             }
-            other => panic!("unknown op {other}"),
+            "discharge" => {
+                b.discharge(cyc.power_mw, cyc.duration_h).expect("discharge");
+            }
+            other => panic!("step {i}: unknown action {other}"),
         }
         assert!(
-            (b.soc - step.expected_soc_after).abs() < step.tolerance,
-            "step {i}: SoC = {}, want {}",
+            (b.soc - cyc.expected_soc_after).abs() < g.tolerance.soc_abs,
+            "step {i}: SoC = {:.5}, want {:.5}",
             b.soc,
-            step.expected_soc_after
+            cyc.expected_soc_after
+        );
+        let delta = b.cumulative_throughput_mwh - throughput_before;
+        assert!(
+            (delta - cyc.expected_throughput_mwh_delta).abs() < g.tolerance.throughput_abs,
+            "step {i}: throughput delta = {delta:.3}, want {:.3}",
+            cyc.expected_throughput_mwh_delta
         );
     }
 }

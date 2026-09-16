@@ -49,13 +49,18 @@ pub enum RelayCurve {
 
 impl RelayCurve {
     /// Trip time (s) for the given current multiple `i = I/Ipickup`.
+    ///
+    /// IEC 60255-151 characteristic `t = k / (i^α − 1)` with
+    /// (k, α) = (0.14, 0.02) standard inverse, (13.5, 1) very inverse and
+    /// (80, 2) extremely inverse. Returns `INFINITY` at or below pickup.
     pub fn trip_time(&self, i: f64) -> f64 {
-        // IEC 60255-151 inverse-time overcurrent relay characteristics.
-        let denom = (i - 1.0).max(0.001);
+        if i <= 1.0 {
+            return f64::INFINITY;
+        }
         match self {
-            RelayCurve::StandardInverse => 0.14 / denom.powf(0.02),
-            RelayCurve::VeryInverse => 13.5 / denom,
-            RelayCurve::ExtremelyInverse => 80.0 / denom.powf(2.0),
+            RelayCurve::StandardInverse => 0.14 / (i.powf(0.02) - 1.0),
+            RelayCurve::VeryInverse => 13.5 / (i - 1.0),
+            RelayCurve::ExtremelyInverse => 80.0 / (i * i - 1.0),
             RelayCurve::DefiniteTime => 0.1,
         }
     }
@@ -126,5 +131,21 @@ mod tests {
         backup.time_delay_s = 0.3;
         let currents = vec![2.0, 5.0, 10.0, 20.0];
         assert!(check_coordination(&primary, &backup, &currents));
+    }
+
+    #[test]
+    fn iec_60255_reference_trip_times() {
+        // Published IEC 60255-151 trip times at TMS = 1.
+        let si_2 = RelayCurve::StandardInverse.trip_time(2.0);
+        assert!((si_2 - 10.03).abs() < 0.05, "SI M=2 = {si_2}");
+        assert!((RelayCurve::VeryInverse.trip_time(2.0) - 13.5).abs() < 1e-9);
+        assert!(
+            (RelayCurve::ExtremelyInverse.trip_time(2.0) - 80.0 / 3.0).abs() < 1e-9
+        );
+        assert!((RelayCurve::VeryInverse.trip_time(5.0) - 3.375).abs() < 1e-9);
+        assert!(
+            (RelayCurve::ExtremelyInverse.trip_time(5.0) - 10.0 / 3.0).abs() < 1e-9
+        );
+        assert!(RelayCurve::StandardInverse.trip_time(1.0).is_infinite());
     }
 }

@@ -47,17 +47,20 @@ impl MarketSignal {
         self.price_series.max()
     }
 
-    /// Off-peak price (10th percentile).
-    pub fn off_peak_price(&self) -> f64 {
+    /// Off-peak price (10th percentile). Returns `None` for an empty series.
+    pub fn off_peak_price(&self) -> Option<f64> {
+        if self.price_series.is_empty() {
+            return None;
+        }
         let mut sorted = self.price_series.values.clone();
-        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        sorted.sort_by(f64::total_cmp);
         let idx = (sorted.len() as f64 * 0.10) as usize;
-        sorted[idx.min(sorted.len() - 1)]
+        Some(sorted[idx.min(sorted.len() - 1)])
     }
 
-    /// Price spread: peak - off-peak.
-    pub fn price_spread(&self) -> f64 {
-        self.peak_price() - self.off_peak_price()
+    /// Price spread: peak - off-peak. Returns `None` for an empty series.
+    pub fn price_spread(&self) -> Option<f64> {
+        Some(self.peak_price() - self.off_peak_price()?)
     }
 }
 
@@ -85,6 +88,17 @@ mod tests {
     #[test]
     fn spread_positive() {
         let s = MarketSignal::new(MarketType::DayAhead, ts());
-        assert!(s.price_spread() > 50.0);
+        assert!(s.price_spread().unwrap() > 50.0);
+    }
+
+    #[test]
+    fn empty_series_has_no_prices() {
+        let start = chrono::Utc.with_ymd_and_hms(2026, 1, 1, 0, 0, 0).unwrap();
+        let s = MarketSignal::new(
+            MarketType::DayAhead,
+            UniformTimeSeries::new("price", "$/MWh", start, 3600, vec![]),
+        );
+        assert!(s.off_peak_price().is_none());
+        assert!(s.price_spread().is_none());
     }
 }

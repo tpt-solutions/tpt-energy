@@ -101,9 +101,9 @@ impl UniformTimeSeries {
 
     /// Resample to a new step duration.
     ///
-    /// `new_step_seconds` must be a positive multiple of the current step.
-    /// Decimation is performed by averaging; upsampling uses the requested
-    /// [`ResampleMethod`].
+    /// `new_step_seconds` must be a positive integer multiple (downsampling)
+    /// or divisor (upsampling) of the current step. Decimation is performed
+    /// by averaging; upsampling uses the requested [`ResampleMethod`].
     pub fn resample(
         &self,
         new_step_seconds: i64,
@@ -112,7 +112,16 @@ impl UniformTimeSeries {
         if new_step_seconds <= 0 {
             return Err(TimeSeriesError::InvalidStep(new_step_seconds as f64));
         }
+        if self.step_seconds <= 0 {
+            return Err(TimeSeriesError::InvalidStep(self.step_seconds as f64));
+        }
+        if self.values.is_empty() {
+            return Err(TimeSeriesError::Empty);
+        }
         if new_step_seconds >= self.step_seconds {
+            if new_step_seconds % self.step_seconds != 0 {
+                return Err(TimeSeriesError::IncommensurateStep(new_step_seconds as f64));
+            }
             // Downsample: average
             let factor = (new_step_seconds / self.step_seconds) as usize;
             let mut values = Vec::new();
@@ -128,6 +137,9 @@ impl UniformTimeSeries {
                 values,
             })
         } else {
+            if self.step_seconds % new_step_seconds != 0 {
+                return Err(TimeSeriesError::IncommensurateStep(new_step_seconds as f64));
+            }
             // Upsample via interpolation
             let factor = (self.step_seconds / new_step_seconds) as usize;
             let mut values = Vec::with_capacity((self.values.len() - 1) * factor + 1);
@@ -235,5 +247,39 @@ mod tests {
         let s = series();
         let r = s.resample(0, ResampleMethod::Linear);
         assert!(r.is_err());
+    }
+
+    #[test]
+    fn resample_rejects_empty_series() {
+        let start = chrono::Utc.with_ymd_and_hms(2026, 1, 1, 0, 0, 0).unwrap();
+        let s = UniformTimeSeries::new("x", "MW", start, 3600, vec![]);
+        assert!(matches!(
+            s.resample(7200, ResampleMethod::Linear),
+            Err(TimeSeriesError::Empty)
+        ));
+        assert!(matches!(
+            s.resample(1800, ResampleMethod::Linear),
+            Err(TimeSeriesError::Empty)
+        ));
+    }
+
+    #[test]
+    fn resample_rejects_incommensurate_steps() {
+        let s = series();
+        // 5400 s is neither a multiple of 3600 s nor a divisor of it; the
+        // old behavior silently kept the values and relabeled the step.
+        assert!(matches!(
+            s.resample(5400, ResampleMethod::Linear),
+            Err(TimeSeriesError::IncommensurateStep(_))
+        ));
+        assert!(s.resample(1000, ResampleMethod::Step).is_err());
+    }
+
+    #[test]
+    fn resample_single_value_upsample() {
+        let start = chrono::Utc.with_ymd_and_hms(2026, 1, 1, 0, 0, 0).unwrap();
+        let s = UniformTimeSeries::new("x", "MW", start, 3600, vec![42.0]);
+        let r = s.resample(1800, ResampleMethod::Linear).unwrap();
+        assert_eq!(r.values, vec![42.0]);
     }
 }

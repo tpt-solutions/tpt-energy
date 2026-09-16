@@ -1,34 +1,35 @@
 {
+  "description": "Published Jensen/PARK single-wake deficit: deficit = (1-sqrt(1-Ct))*(D/(D+2k*x))^2 with Ct=0.8, k=0.075, D=80 m, v0=10 m/s. Analytic reference values (not solver-generated).",
   "downstream_samples_mps": [
     {
-      "deficit_factor": 0.3714420741390887,
+      "deficit_factor": 0.41798593913046667,
       "distance_d_m": 80.0,
-      "v_downstream_mps": 6.285579258609113
+      "v_downstream_mps": 5.820140608695334
     },
     {
-      "deficit_factor": 0.27430914368795356,
+      "deficit_factor": 0.3270925470414451,
       "distance_d_m": 160.0,
-      "v_downstream_mps": 7.256908563120464
+      "v_downstream_mps": 6.729074529585549
     },
     {
-      "deficit_factor": 0.17084380241115016,
+      "deficit_factor": 0.21593218925782895,
       "distance_d_m": 320.0,
-      "v_downstream_mps": 8.291561975888499
+      "v_downstream_mps": 7.84067810742171
     },
     {
-      "deficit_factor": 0.0863749435344644,
+      "deficit_factor": 0.11421206704546323,
       "distance_d_m": 640.0,
-      "v_downstream_mps": 9.136250564655356
+      "v_downstream_mps": 8.857879329545367
     },
     {
-      "deficit_factor": 0.03522238430254565,
+      "deficit_factor": 0.047818893122841016,
       "distance_d_m": 1280.0,
-      "v_downstream_mps": 9.647776156974544
+      "v_downstream_mps": 9.521811068771589
     }
   ],
   "rotor_diameter_m": 80.0,
   "thrust_coefficient": 0.8,
-  "tolerance_abs": 1e-6,
+  "tolerance_abs": 1e-06,
   "upstream_wind_speed_mps": 10.0,
   "wake_decay_k": 0.075
 }

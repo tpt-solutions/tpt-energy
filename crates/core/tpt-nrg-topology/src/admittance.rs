@@ -79,19 +79,23 @@ impl<'a> AdmittanceMatrixBuilder<'a> {
     #[must_use]
     pub fn build(&self) -> AdmittanceMatrix {
         let n = self.system.buses.len();
+        // Map bus id → dense index sized by max id so that non-contiguous
+        // or 0-based id schemes still resolve (bus ids are not required to
+        // be 1..=n).
         let bus_index: Vec<Option<usize>> = {
-            let mut idx = vec![None; n + 1];
+            let max_id = self.system.buses.iter().map(|b| b.id).max().unwrap_or(0);
+            let mut idx = vec![None; max_id + 1];
             for (i, b) in self.system.buses.iter().enumerate() {
-                if b.id <= n {
-                    idx[b.id] = Some(i);
-                }
+                idx[b.id] = Some(i);
             }
             idx
         };
         let mut y = AdmittanceMatrix::zeros(n);
 
         for b in &self.system.buses {
-            if let Some(i) = bus_index[b.id] {
+            // `get` (not index) — bus ids may exceed the bus count on
+            // non-contiguous id schemes; indexing would panic.
+            if let Some(i) = bus_index.get(b.id).copied().flatten() {
                 y.g[i * n + i] += b.shunt_conductance_pu;
                 y.b[i * n + i] += b.shunt_susceptance_pu;
             }
@@ -137,18 +141,23 @@ impl<'a> AdmittanceMatrixBuilder<'a> {
                 y.g[j * n + i] -= g_series;
                 y.b[j * n + i] -= b_series;
             } else {
+                // Complex tap t = tap·e^{jθ}. The π-model requires
+                //   Y[f,f] += y/|t|²,  Y[t,t] += y,
+                //   Y[f,t] -= y/t* = -y·e^{+jθ}/tap,
+                //   Y[t,f] -= y/t  = -y·e^{-jθ}/tap.
                 let tap_sq = tap * tap;
-                // y / |t|² and y / t (complex division)
                 y.g[i * n + i] += g_series / tap_sq;
                 y.b[i * n + i] += b_series / tap_sq + bc_half;
                 y.g[j * n + j] += g_series;
                 y.b[j * n + j] += b_series + bc_half;
-                // -y / t* : multiply -y by t
-                let (gt, bt) = mul_complex(-g_series, -b_series, tap, shift);
+                let inv_tap = 1.0 / tap;
+                let (cs, sn) = (shift.cos() * inv_tap, shift.sin() * inv_tap);
+                // -y / t*
+                let (gt, bt) = mul_complex(-g_series, -b_series, cs, sn);
                 y.g[i * n + j] += gt;
                 y.b[i * n + j] += bt;
-                // -y / t : multiply -y by t*
-                let (gt2, bt2) = mul_complex(-g_series, -b_series, tap, -shift);
+                // -y / t
+                let (gt2, bt2) = mul_complex(-g_series, -b_series, cs, -sn);
                 y.g[j * n + i] += gt2;
                 y.b[j * n + i] += bt2;
             }
@@ -170,8 +179,17 @@ fn mul_complex(a: f64, b: f64, c: f64, d: f64) -> (f64, f64) {
 #[cfg(feature = "substrate")]
 #[must_use]
 pub fn build_sparse_coo(system: &EnergySystem) -> tpt_math_linalg_sparse::CooMatrix<f64> {
+    use std::collections::HashMap;
     use tpt_math_linalg_sparse::CooMatrix;
     let n = system.buses.len();
+    // Map bus id → dense index exactly like the dense path (ids may be
+    // non-contiguous or 0-based; never assume id-1).
+    let index: HashMap<usize, usize> = system
+        .buses
+        .iter()
+        .enumerate()
+        .map(|(i, b)| (b.id, i))
+        .collect();
     let mut coo = CooMatrix::<f64>::new(n, n);
     // Diagonal shunt
     for (i, b) in system.buses.iter().enumerate() {
@@ -183,11 +201,10 @@ pub fn build_sparse_coo(system: &EnergySystem) -> tpt_math_linalg_sparse::CooMat
         if !br.in_service {
             continue;
         }
-        let i = br.from_bus.saturating_sub(1);
-        let j = br.to_bus.saturating_sub(1);
-        if i >= n || j >= n {
-            continue;
-        }
+        let (i, j) = match (index.get(&br.from_bus), index.get(&br.to_bus)) {
+            (Some(&i), Some(&j)) => (i, j),
+            _ => continue,
+        };
         let r = br.resistance_pu;
         let x = br.reactance_pu;
         let denom = r * r + x * x;
@@ -272,6 +289,60 @@ mod tests {
         let y = AdmittanceMatrixBuilder::new(&sys).build();
         assert!((y.g_ij(0, 1)).abs() < 1e-12);
         assert!((y.b_ij(0, 1)).abs() < 1e-12);
+    }
+
+    #[test]
+    fn y_bus_tap_off_diagonal_divides_by_tap() {
+        // r=0, x=0.1, tap=0.95, shift=0:
+        //   y = -j10
+        //   Y[f,f] = y/tap² = -j11.080...
+        //   Y[f,t] = -y/tap = +j10.526...  (NOT -y·tap)
+        let mut sys = EnergySystem::new("t", "T", 100.0, 60.0);
+        sys.add_bus(Bus::new(1, "B1", BusType::Slack)).unwrap();
+        sys.add_bus(Bus::new(2, "B2", BusType::Pq)).unwrap();
+        let mut br = Branch::new(1, "T12", 1, 2, 0.0, 0.1);
+        br.tap_ratio = 0.95;
+        sys.add_branch(br).unwrap();
+        let y = AdmittanceMatrixBuilder::new(&sys).build();
+        assert!((y.b_ij(0, 0) - (-10.0 / (0.95 * 0.95))).abs() < 1e-9);
+        assert!((y.b_ij(0, 1) - (10.0 / 0.95)).abs() < 1e-9);
+        assert!((y.b_ij(1, 0) - (10.0 / 0.95)).abs() < 1e-9);
+    }
+
+    #[test]
+    fn y_bus_phase_shift_off_diagonals_are_conjugates() {
+        // tap=1, shift=π/6, y = -j10:
+        //   Y[f,t] = -y·e^{jθ}  = -10·sinθ + j·10·cosθ
+        //   Y[t,f] = -y·e^{-jθ} = +10·sinθ + j·10·cosθ
+        let mut sys = EnergySystem::new("t", "T", 100.0, 60.0);
+        sys.add_bus(Bus::new(1, "B1", BusType::Slack)).unwrap();
+        sys.add_bus(Bus::new(2, "B2", BusType::Pq)).unwrap();
+        let mut br = Branch::new(1, "PS12", 1, 2, 0.0, 0.1);
+        br.phase_shift_rad = std::f64::consts::FRAC_PI_6;
+        sys.add_branch(br).unwrap();
+        let y = AdmittanceMatrixBuilder::new(&sys).build();
+        let s = std::f64::consts::FRAC_PI_6.sin();
+        let c = std::f64::consts::FRAC_PI_6.cos();
+        assert!((y.g_ij(0, 1) - (-10.0 * s)).abs() < 1e-9);
+        assert!((y.b_ij(0, 1) - (10.0 * c)).abs() < 1e-9);
+        assert!((y.g_ij(1, 0) - (10.0 * s)).abs() < 1e-9);
+        assert!((y.b_ij(1, 0) - (10.0 * c)).abs() < 1e-9);
+    }
+
+    #[test]
+    fn y_bus_survives_non_contiguous_bus_ids() {
+        // Bus ids {10, 20} with 2 buses must not panic and must populate
+        // the 2×2 matrix in dense order.
+        let mut sys = EnergySystem::new("t", "T", 100.0, 60.0);
+        sys.add_bus(Bus::new(10, "B10", BusType::Slack)).unwrap();
+        sys.add_bus(Bus::new(20, "B20", BusType::Pq)).unwrap();
+        sys.add_branch(Branch::new(1, "L", 10, 20, 0.01, 0.05)).unwrap();
+        let y = AdmittanceMatrixBuilder::new(&sys).build();
+        assert!((y.g_ij(0, 1) - y.g_ij(1, 0)).abs() < 1e-12);
+        assert!(
+            y.g_ij(0, 1).abs() > 0.0 || y.b_ij(0, 1).abs() > 0.0,
+            "branch between non-contiguous ids must populate Y"
+        );
     }
 
     /// Phase 1 milestone: parse IEEE 14-bus and validate Y-bus against the

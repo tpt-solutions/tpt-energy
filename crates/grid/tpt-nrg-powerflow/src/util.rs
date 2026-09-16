@@ -79,6 +79,48 @@ pub(crate) fn bus_schedules_pu(system: &EnergySystem) -> (Vec<f64>, Vec<f64>) {
     (p_sched, q_sched)
 }
 
+/// Per-bus load in MW / MVAr, combining bus-level and standalone loads.
+pub(crate) fn bus_loads_mw(system: &EnergySystem) -> (Vec<f64>, Vec<f64>) {
+    let n = system.buses.len();
+    let mut p = vec![0.0_f64; n];
+    let mut q = vec![0.0_f64; n];
+    for (i, b) in system.buses.iter().enumerate() {
+        p[i] = b.load_mw;
+        q[i] = b.load_mvar;
+    }
+    let map = bus_index_map(system);
+    for l in &system.loads {
+        if !l.in_service {
+            continue;
+        }
+        if let Some(Some(idx)) = map.get(l.bus_id) {
+            p[*idx] += l.p_mw;
+            q[*idx] += l.q_mvar;
+        }
+    }
+    (p, q)
+}
+
+/// Solved net complex power injection (p.u.) at dense bus index `i`.
+pub(crate) fn net_injection_pu(
+    y_bus: &AdmittanceMatrix,
+    v: &[f64],
+    theta: &[f64],
+    i: usize,
+) -> (f64, f64) {
+    let n = y_bus.n;
+    let mut p_inj = 0.0;
+    let mut q_inj = 0.0;
+    for k in 0..n {
+        let dt = theta[i] - theta[k];
+        let gik = y_bus.g_ij(i, k);
+        let bik = y_bus.b_ij(i, k);
+        p_inj += v[k] * (gik * dt.cos() + bik * dt.sin());
+        q_inj += v[k] * (gik * dt.sin() - bik * dt.cos());
+    }
+    (p_inj * v[i], q_inj * v[i])
+}
+
 /// Initialize the voltage vector.
 ///
 /// Strategy:

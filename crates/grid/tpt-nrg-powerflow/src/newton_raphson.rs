@@ -7,7 +7,8 @@ use tpt_nrg_topology::AdmittanceMatrixBuilder;
 use crate::result::PowerFlowResult;
 use crate::solver::{PowerFlowError, PowerFlowMethod, PowerFlowOptions, PowerFlowSolver};
 use crate::util::{
-    bus_index_map, bus_schedules_pu, compute_branch_flows, find_slack, flat_start_voltages,
+    bus_index_map, bus_loads_mw, bus_schedules_pu, compute_branch_flows, find_slack,
+    flat_start_voltages, net_injection_pu,
 };
 
 /// Solve the AC power flow using the Newton–Raphson method.
@@ -210,10 +211,26 @@ pub fn solve(
         // Convergence check on the relevant mismatches
         let mut max_mis: f64 = 0.0;
         for &i in &angle_idx {
-            max_mis = max_mis.max(dp[i].abs());
+            let a = dp[i].abs();
+            if !a.is_finite() {
+                // f64::max silently swallows NaN, which would report false
+                // convergence on a diverged iteration.
+                return Err(PowerFlowError::NonConvergence {
+                    iterations,
+                    mismatch: a,
+                });
+            }
+            max_mis = max_mis.max(a);
         }
         for &i in &v_idx {
-            max_mis = max_mis.max(dq[i].abs());
+            let a = dq[i].abs();
+            if !a.is_finite() {
+                return Err(PowerFlowError::NonConvergence {
+                    iterations,
+                    mismatch: a,
+                });
+            }
+            max_mis = max_mis.max(a);
         }
         final_mismatch = max_mis;
         debug!("NR iter {it}: mismatch = {max_mis:.3e}");
@@ -276,33 +293,34 @@ pub fn solve(
     }
 
     let flows = compute_branch_flows(system, &y_bus, &v, &theta);
+    // Each branch's p_from + p_to is its series loss (shunt B is lossless),
+    // so the sum over all branches is the total system loss.
     let mut total_p = 0.0;
     let mut total_q = 0.0;
     for f in &flows {
         total_p += f.p_from_mw + f.p_to_mw;
         total_q += f.q_from_mvar + f.q_to_mvar;
     }
-    let total_losses_mw = 0.5 * total_p;
-    let total_losses_mvar = 0.5 * total_q;
+    let total_losses_mw = total_p;
+    let total_losses_mvar = total_q;
 
     let mut gen_p = vec![0.0_f64; system.generators.len()];
     let mut gen_q = vec![0.0_f64; system.generators.len()];
     let map = bus_index_map(system);
+    let (load_p, load_q) = bus_loads_mw(system);
     for (k, gen) in system.generators.iter().enumerate() {
         if !gen.in_service {
             continue;
         }
         if let Some(Some(bi)) = map.get(gen.bus_id) {
-            gen_p[k] = p_sched[*bi] * system.base_mva;
-            let mut q_inj = 0.0;
-            let vi = v[*bi];
-            for kk in 0..n {
-                let dt = theta[*bi] - theta[kk];
-                let gik = g[*bi * n + kk];
-                let bik = b[*bi * n + kk];
-                q_inj += v[kk] * (gik * dt.sin() - bik * dt.cos());
-            }
-            gen_q[k] = q_inj * vi * system.base_mva;
+            // Generator output = solved net bus injection + bus load. At
+            // non-slack buses the scheduled injection is exact; at the slack
+            // bus the injection is the solved value (the schedule there is
+            // ignored by the solver).
+            let (p_inj, q_inj) = net_injection_pu(&y_bus, &v, &theta, *bi);
+            let p_bus_pu = if *bi == slack { p_inj } else { p_sched[*bi] };
+            gen_p[k] = p_bus_pu * system.base_mva + load_p[*bi];
+            gen_q[k] = q_inj * system.base_mva + load_q[*bi];
         }
     }
 

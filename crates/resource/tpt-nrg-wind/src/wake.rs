@@ -57,7 +57,16 @@ impl WindFarm {
 
     /// Compute the effective wind speed at each turbine, applying wake
     /// losses from all upstream turbines.
+    ///
+    /// Only [`WakeModel::JensenPark`] is implemented; selecting an
+    /// unimplemented model panics rather than silently computing a
+    /// different model's result.
     pub fn effective_wind_speeds(&self, free_stream_mps: f64) -> Vec<f64> {
+        assert!(
+            self.wake_model == WakeModel::JensenPark,
+            "WakeModel::{:?} is not implemented yet; use WakeModel::JensenPark",
+            self.wake_model
+        );
         let n = self.turbines.len();
         let mut v_eff = vec![free_stream_mps; n];
         let dir = self.wind_direction_rad();
@@ -80,22 +89,18 @@ impl WindFarm {
                 let lateral = (dx * dir.cos() - dy * dir.sin()).abs();
                 let d = self.turbines[j].2.rotor_diameter_m;
                 let r = d * 0.5;
-                // Jensen / PARK wake: deficit = (1 - sqrt(1 - C_T * (D/(D+2k*down))^2))
+                // Jensen / PARK wake: deficit = (1 - sqrt(1 - C_T)) * (D/(D+2k*down))^2
                 // assuming C_T = 0.8 (high-thrust, Betz-optimal region).
-                let ct = 0.8;
+                let ct: f64 = 0.8;
                 let dw = d + 2.0 * self.wake_decay_k * down;
-                let deficit_axial = 1.0 - (1.0 - ct * (d / dw).powi(2)).max(0.0).sqrt();
-                // Linear top-hat with radius r_w = D/2 + k*down
+                let deficit_axial = (1.0 - (1.0 - ct).sqrt()) * (d / dw).powi(2);
+                // Top-hat wake with radius r_w = D/2 + k*down: full deficit
+                // inside the wake cone, none outside.
                 let wake_radius = r + self.wake_decay_k * down;
-                let overlap = if lateral < wake_radius {
-                    1.0 - lateral / wake_radius
-                } else {
-                    0.0
-                };
-                if overlap <= 0.0 {
+                if lateral >= wake_radius {
                     continue;
                 }
-                v_eff[i] *= 1.0 - deficit_axial * overlap;
+                v_eff[i] *= 1.0 - deficit_axial;
             }
         }
         v_eff

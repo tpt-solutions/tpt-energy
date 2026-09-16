@@ -35,6 +35,12 @@ pub enum BatteryError {
         /// Configured maximum SoC.
         max: f64,
     },
+    /// A physically invalid input was provided (e.g. a negative duration).
+    #[error("invalid input: {reason}")]
+    InvalidInput {
+        /// Description of the invalid input.
+        reason: String,
+    },
 }
 
 /// Battery degradation model.
@@ -156,6 +162,11 @@ impl BatteryStorage {
         power_mw: f64,
         duration_h: f64,
     ) -> BatteryResult<f64> {
+        if duration_h < 0.0 {
+            return Err(BatteryError::InvalidInput {
+                reason: format!("duration_h must be non-negative, got {duration_h}"),
+            });
+        }
         let power = power_mw.max(0.0).min(self.power_rating_mw);
         // Energy in (MWh) from grid.  Stored energy = in * sqrt(eff) so that
         // round-trip efficiency is preserved.
@@ -182,12 +193,20 @@ impl BatteryStorage {
         power_mw: f64,
         duration_h: f64,
     ) -> BatteryResult<f64> {
+        if duration_h < 0.0 {
+            return Err(BatteryError::InvalidInput {
+                reason: format!("duration_h must be non-negative, got {duration_h}"),
+            });
+        }
         let power = power_mw.max(0.0).min(self.power_rating_mw);
+        // Grid-side request → stored-energy draw, so the discharge leg loses
+        // the same sqrt(round_trip_efficiency) the charge leg gains.
         let eta = self.round_trip_efficiency.sqrt();
         let available = self.available_energy_mwh();
-        let out_energy = power * duration_h;
-        let actual_out = out_energy.min(available);
-        self.soc -= actual_out / self.energy_capacity_mwh;
+        let draw_requested = power * duration_h / eta;
+        let actual_draw = draw_requested.min(available);
+        let actual_out = actual_draw * eta;
+        self.soc -= actual_draw / self.energy_capacity_mwh;
         self.cumulative_throughput_mwh += actual_out;
         if self.soc < self.min_soc {
             return Err(BatteryError::SoCBelowMin {
@@ -229,8 +248,9 @@ mod tests {
     fn discharge_decreases_soc() {
         let mut b = BatteryStorage::new(100.0, 50.0, 0.9).with_soc(0.1, 0.8);
         b.discharge(50.0, 0.5).unwrap();
-        // 50 * 0.5 = 25 MWh delivered, SoC = 80% - 25% = 55%
-        assert!((b.soc - 0.55).abs() < 1e-6, "soc = {}", b.soc);
+        // 25 MWh delivered; stored-side draw = 25/sqrt(0.9) = 26.352 MWh
+        // SoC = 80% - 26.352% ≈ 53.65%
+        assert!((b.soc - 0.536477).abs() < 1e-5, "soc = {}", b.soc);
     }
 
     #[test]
@@ -239,7 +259,9 @@ mod tests {
         // Try to discharge 100 MW for 1 hour; only (30-20)%*100 = 10 MWh
         // available, so result is clamped to 10.
         let out = b.discharge(100.0, 1.0).unwrap();
-        assert!((out - 10.0).abs() < 1e-6, "out = {out}");
+        // Stored draw is capped at the 10 available MWh; the grid receives
+        // 10 * sqrt(0.9) ≈ 9.487 MWh.
+        assert!((out - 9.4868).abs() < 1e-3, "out = {out}");
         assert!((b.soc - 0.20).abs() < 1e-6);
     }
 
@@ -255,8 +277,27 @@ mod tests {
         // Charge 2.5 MWh in for 1h at 2.5 MW → stored = 2.5 * 0.9 = 2.25 MWh
         let stored = b.charge(2.5, 1.0).unwrap();
         assert!((stored - 2.25).abs() < 1e-6);
-        // SoC back to ~0.475 (was 0.25, +0.225)
-        assert!((b.soc - 0.475).abs() < 1e-6);
+        // SoC = 0.2222 (after the discharge draw of 2.5/0.9) + 0.225
+        assert!((b.soc - 0.447222).abs() < 1e-5);
+    }
+
+    #[test]
+    fn full_cycle_delivers_round_trip_efficiency() {
+        // Charge then fully discharge: energy out / energy in = RTE.
+        let mut b = BatteryStorage::new(100.0, 50.0, 0.81).with_soc(0.0, 0.0);
+        b.charge(50.0, 1.0).unwrap(); // stores 45 MWh
+        let out = b.discharge(50.0, 1.0).unwrap(); // delivers 40.5 MWh
+        assert!((out - 40.5).abs() < 1e-9, "out = {out}");
+        assert!((out / 50.0 - 0.81).abs() < 1e-9);
+        assert!((b.soc - 0.0).abs() < 1e-9, "soc = {}", b.soc);
+    }
+
+    #[test]
+    fn negative_duration_is_rejected() {
+        let mut b = BatteryStorage::new(100.0, 50.0, 0.9).with_soc(0.1, 0.5);
+        assert!(b.charge(10.0, -1.0).is_err());
+        assert!(b.discharge(10.0, -1.0).is_err());
+        assert!((b.soc - 0.5).abs() < 1e-12);
     }
 
     #[test]
