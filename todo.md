@@ -385,3 +385,49 @@ IEEE 118-bus validation (Phase 6 milestone note), the Phase 7 browser demos
 (out of local scope), cross-repo substrate integration tests (out of local
 scope), crates.io publishing + `v1.0.0` tag (requires API token), and the
 GitHub Projects roadmap board (requires org admin access).
+
+---
+
+## Phase 11 — Adoption, Interop & Quality Backlog
+
+**Origin note (2026-09-26):** items below come from a platform review focused
+on bugs/gaps and, in particular, what would make adoption faster and easier
+(examples, templates, automation). The codebase itself has no TODOs,
+`unimplemented!()`, or ignored tests — these are surface-area gaps and
+polish items, not fixes for broken code.
+
+### Correctness / cleanup
+- [ ] `tpt-nrg-topology/src/graph.rs:120` — document (or `.expect(...)`-annotate) the `prev[cur].unwrap()` invariant in BFS path reconstruction; it's safe today (guarded by the `visited[goal]` check) but undocumented
+- [ ] `tpt-nrg-wasm`: replace stringified `JsValue::from(e.to_string())` errors with the existing `WasmError` (`{kind, message}`) type across the `#[wasm_bindgen]` boundary so JS callers can discriminate error kinds
+- [ ] RFC: unify error handling — decide whether `tpt-nrg-powerflow::PowerFlowError`, `tpt-nrg-economic-dispatch::DispatchError`, and the other per-crate `thiserror` enums (timeseries, topology, wasm, battery) should wrap/extend `tpt-nrg-core::CoreError` instead of each rolling an independent taxonomy
+
+### CLI
+- [ ] New `tpt-nrg` CLI binary/crate: `tpt-nrg run --system case.json --method newton-raphson --format table|json` and `tpt-nrg convert --from matpower --to json`
+- [ ] Wire prebuilt binary releases for the CLI into the existing `release.yml` (e.g. via `cargo-dist` or `cargo binstall` support)
+
+### Interoperability
+- [ ] Promote `tools/matpower_to_json.py` into a first-class Rust crate (`tpt-nrg-interop`) with two-way MATPOWER ⇄ JSON conversion (not a standalone Python script)
+- [ ] Add PSS/E import/export to `tpt-nrg-interop`
+- [ ] Add CIM (IEC 61970) import/export to `tpt-nrg-interop`, building on the existing `docs/book/src/reference/iec-standards.md` review
+- [ ] Add YAML and CSV import for `EnergySystem` construction (JSON-only today)
+
+### Language bindings & distribution
+- [ ] Python bindings via `pyo3`/`maturin`, published to PyPI *(likely higher ROI than further WASM work for the power-systems/research audience)*
+- [ ] Package the `tpt-nrg-wasm` `wasm-pack` output as a publishable npm package; check in or CI-generate the `.d.ts` TypeScript type definitions
+- [ ] Expand the WASM surface beyond power flow/validation/microgrid-step-stub to cover dispatch, unit commitment, LCOE, and carbon intensity
+- [ ] Implement real control logic for `microgrid_step_json` (currently an explicit placeholder returning empty actions)
+
+### Visualization
+- [ ] New minimal visualization crate: SVG single-line diagram + voltage/loading heatmap rendered from a `PowerFlowResult`
+
+### Playground / demo
+- [ ] Hosted interactive browser playground (mdBook + WASM + the new visualization crate): pick an IEEE test case or paste a MATPOWER case, see power flow and voltage profile in-browser *(closes the browser-harness gap already flagged in Phase 7)*
+
+### Adoption / usability
+- [ ] `cargo generate` project template ("new energy system project"): scaffolded `Cargo.toml` pinned to workspace crate versions, example `system.json`, and a `main.rs` that loads + solves it
+- [ ] Task-shaped worked examples: "import a MATPOWER case and run a contingency analysis," "size a battery for peak shaving from a load CSV"
+- [ ] Add README badges (build status, crates.io version, Codecov, docs.rs)
+
+### Automation
+- [ ] Automate cross-crate changelog/version bumps (e.g. `release-plz` or `cargo-smart-release`), given the workspace already uses shared `[workspace.package]` versioning
+- [ ] Seed a small batch of labeled "good first issue"s (e.g. the error-unification RFC and WASM error-typing fix above) to give new contributors an entry point

@@ -1,0 +1,43 @@
+[package]
+name = "tpt-nrg-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+description = "tpt-nrg command-line interface: run power flow, dispatch, fault and LCOE analyses, and convert between MATPOWER, PSS/E, CIM, YAML, CSV and JSON"
+categories = ["science", "command-line-utilities", "simulation"]
+keywords = ["power-systems", "cli", "matpower", "power-flow", "energy"]
+
+[[bin]]
+name = "tpt-nrg"
+path = "src/main.rs"
+
+[lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+missing_errors_doc = "warn"
+missing_panics_doc = "warn"
+
+[dependencies]
+tpt-nrg-core = { workspace = true }
+tpt-nrg-powerflow = { workspace = true }
+tpt-nrg-fault = { workspace = true }
+tpt-nrg-economic-dispatch = { workspace = true }
+tpt-nrg-unit-commitment = { workspace = true }
+tpt-nrg-lcoe = { workspace = true }
+tpt-nrg-carbon = { workspace = true }
+tpt-nrg-timeseries = { workspace = true }
+tpt-nrg-interop = { workspace = true }
+tpt-nrg-viz = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+clap = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]

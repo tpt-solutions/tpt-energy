@@ -25,6 +25,9 @@ members = [
     "crates/economics/tpt-nrg-lcoe",
     "crates/economics/tpt-nrg-market",
     "crates/economics/tpt-nrg-carbon",
+    "crates/interop/tpt-nrg-interop",
+    "crates/interop/tpt-nrg-viz",
+    "crates/cli/tpt-nrg-cli",
 ]
 
 [workspace.package]
@@ -34,7 +37,7 @@ rust-version = "1.84"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/tpt-solutions/tpt-energy"
 homepage = "https://github.com/tpt-solutions/tpt-energy"
-authors = ["TPT Solutions <[email protected]>"]
+authors = ["TPT Solutions"]
 description = "TPT Energy: power systems, resource modeling, storage, dispatch, and grid economics in Rust"
 
 [workspace.dependencies]
@@ -69,6 +72,9 @@ tpt-nrg-lcoe = { path = "crates/economics/tpt-nrg-lcoe", version = "0.1.0" }
 tpt-nrg-market = { path = "crates/economics/tpt-nrg-market", version = "0.1.0" }
 tpt-nrg-carbon = { path = "crates/economics/tpt-nrg-carbon", version = "0.1.0" }
 
+tpt-nrg-interop = { path = "crates/interop/tpt-nrg-interop", version = "0.1.0" }
+tpt-nrg-viz = { path = "crates/interop/tpt-nrg-viz", version = "0.1.0" }
+
 # External substrate crates (TPT ecosystem)
 #
 # These are pulled from crates.io under the TPT Solutions org. The tpt-nrg-*
@@ -98,6 +104,9 @@ chrono = { version = "0.4", features = ["serde"] }
 log = "0.4"
 env_logger = "0.11"
 approx = "0.5"
+clap = { version = "4.5", features = ["derive"] }
+csv = "1.4"
+serde_norway = "0.9"
 
 [profile.release]
 opt-level = 3

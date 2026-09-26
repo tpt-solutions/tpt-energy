@@ -1,0 +1,29 @@
+[package]
+name = "tpt-nrg-viz"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+description = "SVG single-line diagrams and voltage/loading heatmaps for TPT Energy power-flow results"
+categories = ["science", "visualization", "graphics"]
+keywords = ["power-systems", "svg", "visualization", "single-line-diagram", "power-flow"]
+
+[lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+missing_errors_doc = "warn"
+missing_panics_doc = "warn"
+
+[dependencies]
+tpt-nrg-core = { workspace = true }
+tpt-nrg-powerflow = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]

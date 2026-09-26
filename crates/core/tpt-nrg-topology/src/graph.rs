@@ -89,6 +89,21 @@ impl NetworkTopology {
     /// Panics during path reconstruction if the predecessor chain is
     /// inconsistent; this can only happen if the topology was mutated
     /// concurrently during the search, which the type system prevents.
+    ///
+    /// Concretely, the `prev[cur].unwrap()` in the reconstruction loop is
+    /// guarded by three invariants established by the BFS above:
+    ///
+    /// 1. `prev[start] == None` and the loop condition is `cur != start`, so
+    ///    the start index is never dereferenced.
+    /// 2. `prev[neighbor]` is written *before* `neighbor` is enqueued, and
+    ///    only ever for indices `!= start`, so every enqueued index carries a
+    ///    predecessor.
+    /// 3. `visited[goal]` is checked before reconstruction begins. `visited`
+    ///    and `prev` are written together, so `visited[goal] == true` implies
+    ///    `goal != start` implies `prev[goal].is_some()`.
+    ///
+    /// Following `prev` strictly decreases BFS depth, so the walk terminates
+    /// at `start` in at most `n_buses()` steps and cannot enter a cycle.
     #[must_use]
     pub fn find_shortest_path(&self, from_bus: usize, to_bus: usize) -> Option<PathResult> {
         let start = *self.bus_id_to_index.get(&from_bus)?;
