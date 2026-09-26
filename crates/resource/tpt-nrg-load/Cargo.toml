@@ -1,4 +1,4 @@
-﻿[package]
+[package]
 name = "tpt-nrg-load"
 version.workspace = true
 edition.workspace = true

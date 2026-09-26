@@ -1,4 +1,4 @@
-﻿[package]
+[package]
 name = "tpt-nrg-lcoe"
 version.workspace = true
 edition.workspace = true

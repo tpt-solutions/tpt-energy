@@ -1,4 +1,4 @@
-﻿[package]
+[package]
 name = "tpt-nrg-state-estimation"
 version.workspace = true
 edition.workspace = true

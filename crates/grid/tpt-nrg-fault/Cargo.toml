@@ -1,4 +1,4 @@
-﻿[package]
+[package]
 name = "tpt-nrg-fault"
 version.workspace = true
 edition.workspace = true

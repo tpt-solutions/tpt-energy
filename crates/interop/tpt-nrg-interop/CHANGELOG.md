@@ -5,6 +5,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0](https://github.com/tpt-solutions/tpt-energy/releases/tag/v0.1.0) - 2026-09-26
+
+### Other
+
+- Add project template, playground, npm packaging, and release automation
+- Add per-crate docs, CI/release workflow updates, and new examples
+- Distinguish parse/validation/infeasible error kinds in Python bindings
+- Add Python bindings, CLI powerflow/dispatch/fault/viz commands, and interop visualization support
+- Add CLI and interop crates, MATPOWER/PSS/E/CIM support, and topology fix
+
 ### Added
 - Two-way MATPOWER (`matpower`) conversion of `case*.m` MATLAB scripts, with
   a byte-identical write-then-read round trip.
