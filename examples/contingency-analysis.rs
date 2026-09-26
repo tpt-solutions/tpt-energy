@@ -71,10 +71,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // ----------------------------------------------------------------
     // 3. N-1 sweep
     // ----------------------------------------------------------------
-    println!("\nStep 3: N-1 contingency sweep ({} outages)", base.branches.len());
     println!(
-        "  {:<12} {:>7} {:>9} {:>9} {:>9}  {}",
-        "outage", "solved", "min |V|", "max load", "losses", "verdict"
+        "\nStep 3: N-1 contingency sweep ({} outages)",
+        base.branches.len()
+    );
+    println!(
+        "  {:<12} {:>7} {:>9} {:>9} {:>9}  verdict",
+        "outage", "solved", "min |V|", "max load", "losses"
     );
     println!("  {}", "-".repeat(74));
 
@@ -107,8 +110,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // ----------------------------------------------------------------
     println!("\nStep 4: Summary");
     let diverged = reports.iter().filter(|r| !r.converged).count();
-    let stressed = reports.iter().filter(|r| r.converged && r.v_min < V_MIN).count();
-    let overloaded = reports.iter().filter(|r| r.converged && r.max_loading > 1.0).count();
+    let stressed = reports
+        .iter()
+        .filter(|r| r.converged && r.v_min < V_MIN)
+        .count();
+    let overloaded = reports
+        .iter()
+        .filter(|r| r.converged && r.max_loading > 1.0)
+        .count();
     println!("  contingencies studied : {}", reports.len());
     println!("  failed to converge    : {diverged}");
     println!("  below V_MIN ({V_MIN:.2} pu)   : {stressed}");
@@ -197,8 +206,16 @@ fn repo_path(relative: &str) -> Result<PathBuf, std::io::Error> {
 fn verify_import(imported: &EnergySystem, reference: &EnergySystem) -> Result<(), String> {
     let problems: Vec<String> = [
         ("buses", imported.buses.len(), reference.buses.len()),
-        ("branches", imported.branches.len(), reference.branches.len()),
-        ("generators", imported.generators.len(), reference.generators.len()),
+        (
+            "branches",
+            imported.branches.len(),
+            reference.branches.len(),
+        ),
+        (
+            "generators",
+            imported.generators.len(),
+            reference.generators.len(),
+        ),
     ]
     .iter()
     .filter(|(_, a, b)| a != b)
@@ -275,13 +292,14 @@ fn evaluate(
     outage: &Branch,
 ) -> Option<(String, PowerFlowResult, &'static str)> {
     let mut system = base.clone();
-    system.branches.iter_mut().find(|b| b.id == outage.id)?.in_service = false;
+    system
+        .branches
+        .iter_mut()
+        .find(|b| b.id == outage.id)?
+        .in_service = false;
 
     if is_unsolvable(&system) {
-        eprintln!(
-            "  (outage of {} islands the network; skipped)",
-            outage.name
-        );
+        eprintln!("  (outage of {} islands the network; skipped)", outage.name);
         return None;
     }
 

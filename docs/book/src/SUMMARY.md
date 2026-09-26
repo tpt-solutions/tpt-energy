@@ -13,6 +13,8 @@
 
 - [Tutorial: 14-bus Power Flow](tutorial-powerflow.md)
 - [Tutorial: Solar + Battery Microgrid](tutorial-microgrid.md)
+- [Worked Example: Contingency Analysis](worked-example-contingency.md)
+- [Worked Example: Battery Sizing](worked-example-battery-sizing.md)
 
 # Core Crates
 

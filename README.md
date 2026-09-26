@@ -183,6 +183,16 @@ let svg = render(&system, Some(&result), &VizOptions::default());
 - `examples/energy-cycle` — end-to-end: resource → storage → grid →
   dispatch → economics
 
+Two task-shaped worked examples answer complete questions rather than
+demonstrating a single API:
+
+- `examples/contingency-analysis` — imports a MATPOWER case, checks the import
+  against the committed JSON copy of the same case, then runs an N-1 outage
+  sweep and ranks the contingencies that break the planning limits
+- `examples/battery-sizing` — sizes a battery for peak shaving from a metered
+  load CSV, sizes the energy by simulating the duty cycle, then confirms the
+  size against the real `BatteryStorage` SoC model and costs it out
+
 The `examples/` directory is its own cargo workspace; build it with
 `cargo check --manifest-path examples/Cargo.toml --all-targets`.
 

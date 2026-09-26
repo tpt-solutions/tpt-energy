@@ -114,6 +114,14 @@ jobs:
         run: |
           cargo check --manifest-path examples/Cargo.toml --all-targets
           cargo run --manifest-path examples/Cargo.toml --bin ieee-14-bus-powerflow
+      - name: Run the worked examples
+        # The worked examples read committed fixtures, so a run that fails here
+        # means the example or the fixture is wrong, not that the machine is.
+        # They are not diffed against a golden because they print a study, not
+        # a value; the assertion is that they complete.
+        run: |
+          cargo run --manifest-path examples/Cargo.toml --bin contingency-analysis
+          cargo run --manifest-path examples/Cargo.toml --bin battery-sizing
 
   golden-drift:
     name: golden fixture drift guard

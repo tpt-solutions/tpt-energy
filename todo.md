@@ -425,20 +425,21 @@ polish items, not fixes for broken code.
 
 ### Adoption / usability
 - [ ] `cargo generate` project template ("new energy system project"): scaffolded `Cargo.toml` pinned to workspace crate versions, example `system.json`, and a `main.rs` that loads + solves it
-- [ ] Task-shaped worked examples: "import a MATPOWER case and run a contingency analysis," "size a battery for peak shaving from a load CSV"
+- [x] Task-shaped worked examples: "import a MATPOWER case and run a contingency analysis," "size a battery for peak shaving from a load CSV" *(`examples/contingency-analysis.rs` verifies the MATPOWER import against the committed JSON case, then runs an N-1 sweep that ranks overloads and reports a short-circuit level; `examples/battery-sizing.rs` sizes by simulating the duty cycle and then confirms the size against the real `BatteryStorage` SoC model. Both run in the CI `examples` job. The battery example deliberately reports a bad investment: at a 0.82 load factor, holding a flat ceiling needs a 106 MWh pack, so the payback exceeds the asset life. That is the correct answer for this profile, and the example says so instead of picking a flattering size.)*
 - [x] Add README badges (build status, crates.io version, Codecov, docs.rs) *(plus license, PyPI, and npm)*
 
 ### Automation
 - [ ] Automate cross-crate changelog/version bumps (e.g. `release-plz` or `cargo-smart-release`), given the workspace already uses shared `[workspace.package]` versioning
 - [x] Seed a small batch of labeled "good first issue"s (e.g. the error-unification RFC and WASM error-typing fix above) to give new contributors an entry point *(five items in `.github/good-first-issues.yml`)*
 
-**Phase 11 status (2026-09-26):** 13 of 18 items are closed. Every gate is
+**Phase 11 status (2026-09-26):** 14 of 18 items are closed. Every gate is
 green locally: `cargo fmt --all -- --check`,
 `cargo clippy --workspace --all-targets --all-features -- -D warnings`,
 `RUSTFLAGS="-D warnings" cargo test --workspace --all-features` (247 unit and
 integration tests, plus 3 doc tests), `RUSTDOCFLAGS="-D warnings" cargo doc`,
 the `wasm32-unknown-unknown` build, the Python wheel plus its 33-check smoke
-test, and the `examples/` sub-workspace. Five items remain open and are listed
-above: the npm package, the browser playground, the `cargo generate` template,
-the two worked examples, and the release automation. Publishing to crates.io,
-PyPI, and npm still needs registry secrets and is tracked in Phase 9.
+test, and the `examples/` sub-workspace (including both worked examples, which
+CI now runs). Four items remain open and are listed above: the npm package,
+the browser playground, the `cargo generate` template, and the release
+automation. Publishing to crates.io, PyPI, and npm still needs registry
+secrets and is tracked in Phase 9.
