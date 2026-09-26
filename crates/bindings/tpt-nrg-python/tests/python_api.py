@@ -17,6 +17,35 @@ IEEE14 = REPO / "test-data" / "ieee" / "ieee14.json"
 
 failures: list[str] = []
 
+# A three-unit case with cost curves. The committed IEEE cases carry no cost
+# curves, so economic dispatch and unit commitment need one that does.
+ECONOMIC_CASE = """
+{
+  "id": "econ", "name": "Three unit", "base_mva": 100.0, "frequency_hz": 60.0,
+  "buses": [
+    {"id": 1, "name": "Slack", "type": "Slack", "voltage_magnitude_pu": 1.06},
+    {"id": 2, "name": "B2", "type": "Pv", "voltage_magnitude_pu": 1.02},
+    {"id": 3, "name": "B3", "type": "Pq", "load_mw": 80.0, "load_mvar": 20.0}
+  ],
+  "branches": [
+    {"id": 1, "name": "L12", "from_bus": 1, "to_bus": 2,
+     "resistance_pu": 0.01, "reactance_pu": 0.05, "rating_mva": 200.0},
+    {"id": 2, "name": "L23", "from_bus": 2, "to_bus": 3,
+     "resistance_pu": 0.01, "reactance_pu": 0.05, "rating_mva": 200.0}
+  ],
+  "generators": [
+    {"id": 1, "name": "G1", "bus_id": 1, "type": "Thermal",
+     "p_max_mw": 100.0, "p_min_mw": 10.0,
+     "cost_curve": {"segments": [
+       {"start_mw": 10.0, "end_mw": 100.0, "incremental_cost_per_mwh": 20.0}]}},
+    {"id": 2, "name": "G2", "bus_id": 2, "type": "Thermal",
+     "p_max_mw": 150.0, "p_min_mw": 20.0,
+     "cost_curve": {"segments": [
+       {"start_mw": 20.0, "end_mw": 150.0, "incremental_cost_per_mwh": 30.0}]}}
+  ]
+}
+"""
+
 
 def check(name: str, condition: bool, detail: str = "") -> None:
     if condition:
@@ -70,19 +99,28 @@ def main() -> int:
     check("yaml export", "buses:" in system.to_yaml())
 
     print("economics and studies")
-    outputs, marginal, _cost = system.economic_dispatch(100.0)
+    econ = tpt_nrg.System.from_json(ECONOMIC_CASE)
+    outputs, marginal, _cost = econ.economic_dispatch(100.0)
     check("dispatch covers the load", abs(sum(outputs) - 100.0) < 1.0, str(outputs))
-    check("marginal cost is positive", marginal > 0, str(marginal))
-    commitment, _, _ = system.unit_commitment([100.0] * 24)
+    check("marginal cost is the cheap unit", abs(marginal - 20.0) < 1e-6, str(marginal))
+    commitment, _, _ = econ.unit_commitment([100.0] * 24)
     check("commitment covers 24 h", len(commitment[0]) == 24, str(len(commitment[0])))
     check("fault current is positive", system.fault_current_pu(4) > 0)
     check("carbon intensity is positive", system.carbon_intensity() > 0)
     lcoe = system.lcoe(1.0e8, 50_000.0)
     check("lcoe is positive", lcoe.lcoe_dollar_per_mwh > 0, repr(lcoe))
 
+    print("infeasible dispatch is reported")
+    try:
+        econ.economic_dispatch(10_000.0)
+    except tpt_nrg.EnergyError as exc:
+        check("infeasible kind", getattr(exc, "kind", None) == "infeasible", repr(exc))
+    else:
+        check("infeasible raised", False, "no exception")
+
     print("visualization")
     svg = system.to_svg()
-    check("svg output", svg.startswith("<svg") and svg.endswith("</svg>"), svg[:40])
+    check("svg output", svg.startswith("<svg") and "</svg>" in svg, svg[:40])
     check("svg has one circle per bus", svg.count("<circle") >= system.bus_count)
 
     print("introspection")

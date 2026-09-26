@@ -102,12 +102,19 @@ impl std::fmt::Display for Format {
 ///
 /// # Errors
 ///
-/// Returns [`InteropError::Parse`] if the text is malformed in `format` and
-/// [`InteropError::InvalidSystem`] if the result fails structural validation.
+/// Returns [`InteropError::Parse`] if the text is malformed in `format`,
+/// [`InteropError::InvalidSystem`] if it parses but is not a valid system, and
+/// [`InteropError::Unsupported`] for an unrecognised format.
 pub fn from_text(text: &str, format: Format) -> InteropResult<EnergySystem> {
     match format {
+        // `EnergySystem::from_json` collapses parse and validation failures
+        // into `CoreError`, so they are separated here to keep `kind`
+        // meaningful for callers that branch on it.
         Format::Json => {
-            tpt_nrg_core::EnergySystem::from_json(text).map_err(InteropError::InvalidSystem)
+            let system: EnergySystem = serde_json::from_str(text)
+                .map_err(|e| InteropError::parse("json", e.to_string()))?;
+            system.validate().map_err(InteropError::InvalidSystem)?;
+            Ok(system)
         }
         Format::Yaml => tabular::from_yaml(text),
         Format::Csv => tabular::from_flat_csv(text),

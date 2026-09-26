@@ -60,7 +60,16 @@ fn fail(kind: &str, message: impl std::fmt::Display) -> PyErr {
 fn parse(text: &str, format: &str) -> PyResult<EnergySystem> {
     let format: tpt_nrg_interop::Format =
         tpt_nrg_interop::Format::parse(format).map_err(|e| fail("unsupported", e))?;
-    tpt_nrg_interop::from_text(text, format).map_err(|e| fail(e.kind().as_str(), e))
+    tpt_nrg_interop::from_text(text, format).map_err(|e| {
+        // `InteropErrorKind` separates "could not parse" from "parsed but
+        // structurally wrong", and so should the Python surface.
+        let kind = match e.kind() {
+            tpt_nrg_interop::InteropErrorKind::Parse => "json",
+            tpt_nrg_interop::InteropErrorKind::InvalidSystem => "validation",
+            other => other.as_str(),
+        };
+        fail(kind, e)
+    })
 }
 
 /// Power-flow solver selection.
