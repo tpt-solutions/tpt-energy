@@ -30,6 +30,10 @@ members = [
     "crates/cli/tpt-nrg-cli",
     "crates/bindings/tpt-nrg-python",
 ]
+# `templates/energy-system` is a project template, not a workspace member: its
+# `Cargo.toml` uses `{{crate-name}}`, which cargo cannot parse, and the
+# generated project declares its own empty `[workspace]`.
+exclude = ["templates"]
 
 [workspace.package]
 version = "0.1.0"

@@ -22,8 +22,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `#[wasm_bindgen]` exports for dispatch, commitment, LCOE, carbon, and
   visualization behind the `wasm` feature.
 - This crate-level `README.md` with crates.io `categories` and `keywords` metadata.
+- A publishable npm package: `npm/package.json` with the hand-written
+  metadata `wasm-pack` does not generate, `npm/tpt_nrg_wasm.d.ts` checked in
+  and verified by `tools/build-npm-package.sh --check`, and `npm/README.md`
+  for the registry page.
 
 ### Changed
+- The crate now declares `crate-type = ["cdylib", "rlib"]`. `wasm-pack`
+  requires the `cdylib`, so the package could not be built before; the `rlib`
+  half keeps the crate usable and testable from the workspace in native
+  builds.
 - `# Errors` documentation sections on the JSON-entry-point functions.
 - **`WasmError` is a breaking change:** it is now a struct with
   `{ kind: WasmErrorKind, message: String }` instead of a `#[serde(tag)]`

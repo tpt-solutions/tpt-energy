@@ -1,0 +1,12 @@
+# Badge targets that are allowed not to resolve yet.
+#
+# `tools/check-badges.py` fails when a *registry* badge (crates.io, PyPI, npm,
+# docs.rs) 404s, because that is a promise the README makes to a reader. An
+# entry here suppresses that failure until the promise is kept. One URL
+# substring per line, `# reason` after the fragment marker.
+#
+# Keep this list short: an entry here is a debt, and the reason should say what
+# makes it acceptable and what removes it.
+#
+# Example:
+#   pypi.org/project/tpt-nrg   # published from the first v0.1.0 tag

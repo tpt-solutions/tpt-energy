@@ -1,0 +1,47 @@
+# release-plz configuration.
+#
+# release-plz owns the *changelog and version bump*: on every push to the
+# default branch it opens (or refreshes) a release PR that bumps every crate
+# to the same version and rewrites the `CHANGELOG.md` files from the commits
+# since the last tag.
+#
+# Publishing is deliberately NOT release-plz's job. `release.yml` publishes
+# on a `v*.*.*` tag, which keeps a human in the loop between "the code is
+# ready" and "the artifacts are public", and keeps one place responsible for
+# crates.io, PyPI, npm, the container image, and the GitHub release. The
+# workflow therefore only ever runs `release-plz release --pr`, and a
+# maintainer pushes the tag once that PR is merged.
+#
+# Schema: release-plz 1.x.
+
+[workspace]
+# Both the workspace-level and the per-crate changelogs are updated.
+changelog_extended = true
+changelog_update = true
+changelog_commit_message = "chore: release {{version}}"
+changelog_labels = ["changelog", "release"]
+# Conventional-commit prefixes that are not user-facing.
+changelog_ignore_labels = ["ignore", "chore"]
+# One version for the whole workspace, which is what `[workspace.package]`
+# already implies.
+version_toml = "./Cargo.toml"
+version_tag_regex = "^v[0-9]+\\.[0-9]+\\.[0-9]+$"
+# Do not tag or create a GitHub release: `release.yml` owns both.
+git_release_enable = false
+git_release_name = "v{{version}}"
+tag_name = "v{{version}}"
+tag_message = "Release v{{version}}"
+# The release PR is cut from the default branch and merged back into it.
+allow_branch = ["master", "main"]
+# Dependencies are bumped together; the workspace shares one version already.
+publish_dependencies = true
+publish_time = false
+# Respect the repository's own SemVer cadence: only commits marked with
+# `release-plz` in the message force a release.
+force_release = false
+
+[package]
+changelog_extended = true
+changelog_update = true
+# Per-crate changelogs, so `crates/*/<crate>/CHANGELOG.md` stay accurate.
+changelog_path = "CHANGELOG.md"

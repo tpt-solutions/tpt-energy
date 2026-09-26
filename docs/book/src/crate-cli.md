@@ -1,14 +1,19 @@
 # `tpt-nrg-cli`
 
-The `tpt-nrg` binary: solve a case, convert it between formats, or draw it,
-without writing any Rust.
+The `tpt-nrg` binary: solve a case, convert or compare it between formats,
+draw it, or scaffold a project — without writing any Rust.
 
 ```sh
-cargo install tpt-nrg-cli
+cargo install --path crates/cli/tpt-nrg-cli   # from a checkout
 ```
 
 Prebuilt binaries for Linux (x86-64, aarch64), macOS (aarch64), and Windows
-(x86-64) are attached to every GitHub release.
+(x86-64) are attached to every GitHub release, and a `FROM scratch` container
+image is pushed to GitHub Container Registry on the same tags.
+
+Every subcommand infers the input format from the file extension — `case.m`,
+`case.raw`, `case.rdf`, `case.yaml`, `case.csv`, `case.json` — so `--from` is
+only needed for an extensionless or unusually named file.
 
 ## `tpt-nrg run`
 
@@ -67,12 +72,49 @@ schedule rather than a bare `$0.00`.
 ## `tpt-nrg convert`
 
 ```sh
-tpt-nrg convert --from matpower --to json case14.m -o case14.json
+tpt-nrg convert case14.m -o case14.json
 ```
 
 Omit `-o` to write to standard output. `--from` and `--to` accept `json`,
 `yaml`, `csv`, `matpower`, `psse`, and `cim` — the same set as
 [`tpt-nrg-interop`](crate-interop.md).
+
+### `--diff` and `--round-trip`
+
+A conversion that quietly drops a field is the failure mode worth guarding
+against, so `convert` can also compare:
+
+```sh
+tpt-nrg convert case.json --diff other.m --against-from matpower
+tpt-nrg convert case.m --round-trip
+tpt-nrg convert case.m --round-trip --format json   # for scripts
+```
+
+`--diff` compares two cases field by field; `--round-trip` writes one case back
+out in its own format, reads it again, and compares that. Both exit `1` when
+anything differs and print one line per difference:
+
+```
+case.m as matpower: 2 difference(s)
+  removed  buses[id=3].name: "3" -> <absent>
+  changed  branches[id=4].reactance_pu: 0.05917 -> 0.0592
+```
+
+The comparison lives in [`tpt-nrg-interop`](crate-interop.md) as
+`tpt_nrg_interop::diff` rather than in the CLI, so the WASM and Python bindings
+apply the same rules. `--tolerance` widens the floating-point comparison and
+`--format json` emits the differences as a document.
+
+## `tpt-nrg new`
+
+```sh
+tpt-nrg new my-study --local .
+```
+
+Scaffolds a project that loads and solves a case: a manifest, a three-bus
+`system.json`, and a `main.rs`. `--local` points the dependencies at a checkout
+instead of crates.io, which is what makes the project buildable before the
+first release. See [New project template](project-template.md).
 
 ## `tpt-nrg viz`
 

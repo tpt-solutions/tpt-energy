@@ -1,0 +1,17 @@
+[package]
+name = "{{crate-name}}"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.84"
+license = "MIT OR Apache-2.0"
+description = "{{project-name}}: an energy-system study built with TPT Energy"
+publish = false
+
+# An empty `[workspace]` table keeps the generated project independent of any
+# cargo workspace that happens to contain its directory, so `cargo run` here
+# builds only this crate.
+[workspace]
+
+[dependencies]
+tpt-nrg-core = "0.1"
+tpt-nrg-powerflow = "0.1"

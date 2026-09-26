@@ -65,6 +65,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Windows x86-64) attached to the GitHub release.
 - CI jobs for the CLI, the `wasm32-unknown-unknown` build, and the Python
   wheel plus its API smoke test.
+- `tpt-nrg-interop::diff`: structural comparison of two energy systems
+  (records matched by `id` rather than by position, a floating-point
+  tolerance, and every difference reported with its path such as
+  `buses[id=4].load_mw`), plus `round_trip`, which answers "is this writer
+  lossless for this case?".
+- `tpt-nrg convert --diff <FILE>` and `tpt-nrg convert --round-trip`, which
+  exit non-zero when two cases differ; `--against-from`, `--tolerance`, and
+  `--format json` control the comparison.
+- `tpt-nrg new <NAME>`: scaffolds a study project (manifest, `system.json`,
+  `main.rs`) from `templates/energy-system/`, with `--local` pointing the
+  dependencies at a checkout. The same directory is a `cargo-generate`
+  template, and the CLI embeds it, so the two cannot drift.
+- Format detection from the file extension across `run`, `convert`, and `viz`,
+  via `tpt_nrg_interop::Format::from_path`.
+- A publishable npm package for the WebAssembly bindings
+  (`crates/core/tpt-nrg-wasm/npm/`), a checked-in `tpt_nrg_wasm.d.ts`, and
+  `tools/build-npm-package.sh` with a `--check` drift mode.
+- A browser playground in `playground/`, with a Node smoke test and a GitHub
+  Pages deployment workflow.
+- A `Dockerfile` producing a `FROM scratch` image for the `tpt-nrg` binary,
+  pushed to GitHub Container Registry by the release workflow.
+- Release pre-flight tooling: `tools/publish-dry-run.sh` (a per-crate
+  packaging check, run in CI on manifest changes), `tools/workspace-crates.py`,
+  and `tools/check-badges.py` (README badge honesty, with
+  `.github/badge-allowlist.txt`).
+- `release-plz` configuration and a workflow for cross-crate version bumps and
+  changelog rewrites; publishing stays tag-driven in `release.yml`.
+- Book pages: the five-minute CLI quickstart, the new project template, the
+  golden-case gallery, and the browser playground.
 
 ### Changed
 - `WasmError` is now a `{ kind, message }` struct rather than a tagged enum,
@@ -92,6 +121,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - mdBook `SUMMARY.md` lives at `docs/book/src/SUMMARY.md` (matching
   `book.toml`), so `mdbook build docs/book` works; all chapter links
   resolve.
+- `release.yml` publishes with `cargo publish --workspace` (dependency order,
+  no hard-coded manifest paths) instead of an eight-directory matrix, and now
+  has PyPI and npm publish jobs gated on their tokens plus a container image
+  job.
+- The README no longer advertises `pip install tpt-nrg` and `npm install` as
+  available, and carries no registry version badges, until the first release
+  exists; `tools/check-badges.py` keeps it that way.
 
 ### Fixed
 - Correctness pass across power flow, dispatch, and resource crates
@@ -115,3 +151,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - eddy-viscosity wake march: explicit diffusion step uses a stability-safe
   step size (the axis-adjacent node is stiffer by ~2×), preventing
   divergence at large downstream distances.
+- The `release.yml` publish job ran eight `cargo publish` steps per crate, one
+  per category `working-directory`, seven of which do not exist for any given
+  crate. GitHub Actions fails a step outright when the directory is missing, so
+  the job failed for every crate on a tag push and blocked the GitHub release
+  (which `needs` it). It now discovers the crates from `cargo metadata` and
+  publishes the workspace in dependency order.
+- `tpt-nrg-wasm` now declares `crate-type = ["cdylib", "rlib"]`, which is what
+  `wasm-pack` requires; without it the npm package could not be built at all.
+- The `wasm-pack build` invocation documented in the book put wasm-pack's own
+  flags after the crate path, so they were forwarded to `cargo build` and the
+  documented command failed.
+- The PyPI badge in the README pointed at `pypi.org` while rendering a
+  `crates.io` image, and the npm badge named a package that does not exist.

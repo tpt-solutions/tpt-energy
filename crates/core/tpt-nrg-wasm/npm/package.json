@@ -1,0 +1,40 @@
+{
+  "name": "tpt-nrg-wasm",
+  "version": "0.1.0",
+  "description": "Power flow, economic dispatch, unit commitment, LCOE, carbon intensity, and SVG visualization for TPT Energy, compiled to WebAssembly",
+  "license": "MIT OR Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tpt-solutions/tpt-energy.git"
+  },
+  "homepage": "https://github.com/tpt-solutions/tpt-energy",
+  "bugs": {
+    "url": "https://github.com/tpt-solutions/tpt-energy/issues"
+  },
+  "keywords": [
+    "power-systems",
+    "power-flow",
+    "newton-raphson",
+    "economic-dispatch",
+    "lcoe",
+    "energy",
+    "wasm",
+    "webassembly"
+  ],
+  "type": "module",
+  "main": "tpt_nrg_wasm.js",
+  "module": "tpt_nrg_wasm.js",
+  "types": "tpt_nrg_wasm.d.ts",
+  "files": [
+    "tpt_nrg_wasm.js",
+    "tpt_nrg_wasm.d.ts",
+    "tpt_nrg_wasm_bg.wasm",
+    "tpt_nrg_wasm_bg.wasm.d.ts",
+    "LICENSE-MIT",
+    "LICENSE-APACHE",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}

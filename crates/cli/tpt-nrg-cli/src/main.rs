@@ -1,13 +1,21 @@
 //! `tpt-nrg` — command-line interface for TPT Energy.
 //!
-//! Three subcommands cover the common planning workflows:
+//! Four subcommands cover the common planning workflows:
 //!
 //! - `tpt-nrg run --system case.json --method newton-raphson --format table`
 //!   solves a case and prints bus voltages, branch flows, and losses.
 //! - `tpt-nrg convert --from matpower --to json case.m` rewrites a case in
 //!   another exchange format.
+//! - `tpt-nrg convert case.json --diff case.m` compares two cases field by
+//!   field (via `tpt_nrg_interop::diff`) and exits non-zero when they differ,
+//!   which is how a format migration is validated. `--round-trip` does the
+//!   same for a single file written back in its own format.
 //! - `tpt-nrg viz --system case.json --out diagram.svg` writes a single-line
 //!   diagram and voltage/loading heatmap.
+//! - `tpt-nrg new my-study` scaffolds a project that loads and solves a case.
+//!
+//! Every subcommand infers the input format from the file extension when
+//! `--from` is omitted, so `case.m` and `case14.json` need no extra flags.
 //!
 //! Exit codes: `0` success, `1` the analysis failed, `2` bad input or usage.
 
@@ -16,9 +24,11 @@ use std::process::ExitCode;
 
 use clap::{Parser, Subcommand, ValueEnum};
 
+mod convert;
 mod dispatch;
 mod fault;
 mod powerflow;
+mod template;
 mod viz;
 
 /// Exit code for a usage or input error, as suggested by RFC 0006.
@@ -47,10 +57,12 @@ struct Cli {
 enum Command {
     /// Solve the system and report results.
     Run(RunArgs),
-    /// Convert a case between exchange formats.
+    /// Convert, compare, or round-trip a case between exchange formats.
     Convert(ConvertArgs),
     /// Render a single-line diagram and heatmap.
     Viz(VizArgs),
+    /// Scaffold a new energy-system project.
+    New(NewArgs),
 }
 
 /// Output rendering style.
@@ -77,6 +89,13 @@ enum FormatArg {
     Psse,
     /// CIM / IEC 61970 RDF/XML.
     Cim,
+}
+
+impl FormatArg {
+    /// The interop format this argument names.
+    fn as_format(self) -> tpt_nrg_interop::Format {
+        tpt_nrg_interop::Format::from(self)
+    }
 }
 
 impl From<FormatArg> for tpt_nrg_interop::Format {
@@ -145,8 +164,9 @@ fn main() -> ExitCode {
     let cli = Cli::parse();
     let outcome = match cli.command {
         Command::Run(args) => run_command(&args),
-        Command::Convert(args) => convert_command(&args),
+        Command::Convert(args) => convert::run(&args),
         Command::Viz(args) => viz_command(&args),
+        Command::New(args) => new_command(&args),
     };
     match outcome {
         Ok(()) => ExitCode::SUCCESS,
@@ -167,9 +187,9 @@ struct RunArgs {
     #[arg(short, long, value_name = "FILE")]
     system: PathBuf,
 
-    /// Format of the input file.
-    #[arg(long, value_enum, default_value = "json")]
-    from: FormatArg,
+    /// Format of the input file; inferred from the extension when omitted.
+    #[arg(long, value_enum)]
+    from: Option<FormatArg>,
 
     /// Solver to use.
     #[arg(short, long, value_enum, default_value = "newton-raphson")]
@@ -236,23 +256,85 @@ struct RunArgs {
 }
 
 /// Arguments to `tpt-nrg convert`.
+///
+/// The subcommand has three modes, selected by the flags: a plain rewrite
+/// (the default), `--diff FILE` against a second case, and `--round-trip`
+/// against the case's own re-emission.
 #[derive(Debug, Parser)]
+#[command(after_help = "Examples:\n  \
+    tpt-nrg convert case.m -o case.json\n  \
+    tpt-nrg convert case.json --diff case.m\n  \
+    tpt-nrg convert case.raw --diff case.m --against-from psse\n  \
+    tpt-nrg convert case.m --round-trip --format json")]
 struct ConvertArgs {
     /// Case file to read.
     #[arg(value_name = "INPUT")]
     input: PathBuf,
 
     /// Where to write the result; omit for standard output.
-    #[arg(short, long, visible_alias = "out", value_name = "FILE")]
+    #[arg(
+        short,
+        long,
+        visible_alias = "out",
+        value_name = "FILE",
+        conflicts_with_all = ["diff", "round_trip"]
+    )]
     output: Option<PathBuf>,
 
-    /// Format of the input file.
-    #[arg(long, value_enum, default_value = "json")]
-    from: FormatArg,
+    /// Format of the input file; inferred from the extension when omitted.
+    #[arg(long, value_enum)]
+    from: Option<FormatArg>,
 
-    /// Format to write.
-    #[arg(short, long, value_enum, default_value = "json")]
-    to: FormatArg,
+    /// Format to write; `json` when omitted.
+    #[arg(short, long, value_enum)]
+    to: Option<FormatArg>,
+
+    /// Compare the input against a second case instead of writing a
+    /// conversion, and exit non-zero when the two differ.
+    #[arg(long, value_name = "FILE", conflicts_with = "round_trip")]
+    diff: Option<PathBuf>,
+
+    /// Format of the `--diff` file; inferred from its extension when omitted.
+    #[arg(long, value_enum, requires = "diff")]
+    against_from: Option<FormatArg>,
+
+    /// Round-trip the input through its own format and report what the
+    /// writer lost, exiting non-zero when anything changed.
+    #[arg(long)]
+    round_trip: bool,
+
+    /// How to report the differences: a table, or JSON for scripting.
+    #[arg(short, long, value_enum, default_value = "table")]
+    format: OutputFormat,
+
+    /// Relative-plus-absolute tolerance for floating-point fields.
+    #[arg(
+        long,
+        default_value_t = tpt_nrg_interop::diff::DEFAULT_TOLERANCE,
+        requires = "diff"
+    )]
+    tolerance: f64,
+}
+
+/// Arguments to `tpt-nrg new`.
+#[derive(Debug, Parser)]
+struct NewArgs {
+    /// Project name; also the directory and crate name.
+    #[arg(value_name = "NAME")]
+    name: String,
+
+    /// Directory to create the project in; defaults to the current one.
+    #[arg(short, long, value_name = "DIR")]
+    dir: Option<PathBuf>,
+
+    /// Overwrite an existing project directory.
+    #[arg(short, long)]
+    force: bool,
+
+    /// Depend on this checkout by path instead of on crates.io, so the new
+    /// project builds before the first release is published.
+    #[arg(long, value_name = "REPO_ROOT")]
+    local: Option<PathBuf>,
 }
 
 /// Arguments to `tpt-nrg viz`.
@@ -262,9 +344,9 @@ struct VizArgs {
     #[arg(short, long, value_name = "FILE")]
     system: PathBuf,
 
-    /// Format of the input file.
-    #[arg(long, value_enum, default_value = "json")]
-    from: FormatArg,
+    /// Format of the input file; inferred from the extension when omitted.
+    #[arg(long, value_enum)]
+    from: Option<FormatArg>,
 
     /// Where to write the SVG; omit for standard output.
     #[arg(short, long, visible_alias = "out", value_name = "FILE")]
@@ -279,13 +361,49 @@ struct VizArgs {
     no_flow_labels: bool,
 }
 
+/// Decide the exchange format of `path`.
+///
+/// An explicit `--from` always wins. Otherwise the file extension decides,
+/// so `case.m`, `case.raw`, `case.rdf`, `case.yaml`, `case.csv`, and
+/// `case.json` all work without a flag. A path with no extension falls back
+/// to `fallback`; a path whose extension is *not* a supported format is a
+/// usage error rather than a silent guess, because the resulting parse error
+/// would point at the wrong thing.
+fn resolve_format(
+    path: &Path,
+    explicit: Option<FormatArg>,
+    fallback: tpt_nrg_interop::Format,
+) -> Result<tpt_nrg_interop::Format, CliError> {
+    if let Some(format) = explicit {
+        return Ok(format.as_format());
+    }
+    match tpt_nrg_interop::Format::from_path(path) {
+        Ok(format) => Ok(format),
+        Err(e) if path.extension().is_some() => Err(CliError::Usage(format!(
+            "{e}; pass --from to name the format"
+        ))),
+        Err(_) => Ok(fallback),
+    }
+}
+
 /// Load a system from disk in the given format.
-fn load(path: &Path, format: FormatArg) -> Result<tpt_nrg_core::EnergySystem, CliError> {
+fn load(
+    path: &Path,
+    format: tpt_nrg_interop::Format,
+) -> Result<tpt_nrg_core::EnergySystem, CliError> {
     let text = std::fs::read_to_string(path)
         .map_err(|e| CliError::Usage(format!("cannot read {}: {e}", path.display())))?;
-    let format: tpt_nrg_interop::Format = format.into();
     tpt_nrg_interop::from_text(&text, format)
         .map_err(|e| CliError::Usage(format!("cannot parse {}: {e}", path.display())))
+}
+
+/// Load a system whose format comes from `--from` or the file extension.
+fn load_detected(
+    path: &Path,
+    explicit: Option<FormatArg>,
+) -> Result<tpt_nrg_core::EnergySystem, CliError> {
+    let format = resolve_format(path, explicit, tpt_nrg_interop::Format::Json)?;
+    load(path, format)
 }
 
 /// Write `text` to a file, or to standard output when `path` is `None`.
@@ -303,7 +421,7 @@ fn emit(path: Option<&Path>, text: &str) -> Result<(), CliError> {
 
 /// Handle `tpt-nrg run`, dispatching to the requested study.
 fn run_command(args: &RunArgs) -> Result<(), CliError> {
-    let system = load(&args.system, args.from)?;
+    let system = load_detected(&args.system, args.from)?;
     if let Some(bus) = args.fault_bus {
         fault::run(&system, bus, args.format)
     } else if args.lcoe_capex.is_some() {
@@ -318,26 +436,18 @@ fn run_command(args: &RunArgs) -> Result<(), CliError> {
     }
 }
 
-/// Handle `tpt-nrg convert`.
-fn convert_command(args: &ConvertArgs) -> Result<(), CliError> {
-    let text = std::fs::read_to_string(&args.input)
-        .map_err(|e| CliError::Usage(format!("cannot read {}: {e}", args.input.display())))?;
-    let from: tpt_nrg_interop::Format = args.from.into();
-    let to: tpt_nrg_interop::Format = args.to.into();
-    let system = tpt_nrg_interop::from_text(&text, from)
-        .map_err(|e| CliError::Usage(format!("cannot parse {}: {e}", args.input.display())))?;
-    let out = tpt_nrg_interop::to_text(&system, to)
-        .map_err(|e| CliError::Usage(format!("cannot write {to}: {e}")))?;
-    emit(args.output.as_deref(), &out)
-}
-
 /// Handle `tpt-nrg viz`.
 fn viz_command(args: &VizArgs) -> Result<(), CliError> {
-    let system = load(&args.system, args.from)?;
+    let system = load_detected(&args.system, args.from)?;
     let options = viz::options(args);
     let result = powerflow::solve(&system, tpt_nrg_powerflow::PowerFlowMethod::NewtonRaphson).ok();
     let svg = tpt_nrg_viz::render(&system, result.as_ref(), &options);
     emit(args.out.as_deref(), &svg)
+}
+
+/// Handle `tpt-nrg new`.
+fn new_command(args: &NewArgs) -> Result<(), CliError> {
+    template::scaffold(args)
 }
 
 #[cfg(test)]
@@ -379,9 +489,102 @@ mod tests {
         let Command::Convert(args) = cli.command else {
             panic!("expected `convert`");
         };
-        assert_eq!(args.from, FormatArg::Matpower);
-        assert_eq!(args.to, FormatArg::Json);
+        assert_eq!(args.from, Some(FormatArg::Matpower));
+        assert_eq!(args.to, Some(FormatArg::Json));
         assert_eq!(args.input, PathBuf::from("case.m"));
+    }
+
+    #[test]
+    fn convert_parses_diff_and_round_trip_flags() {
+        let cli = Cli::try_parse_from([
+            "tpt-nrg",
+            "convert",
+            "case.raw",
+            "--diff",
+            "case.m",
+            "--against-from",
+            "matpower",
+            "--format",
+            "json",
+        ])
+        .expect("diff invocation parses");
+        let Command::Convert(args) = cli.command else {
+            panic!("expected `convert`");
+        };
+        assert_eq!(args.diff, Some(PathBuf::from("case.m")));
+        assert_eq!(args.against_from, Some(FormatArg::Matpower));
+        assert_eq!(args.format, OutputFormat::Json);
+        assert!(!args.round_trip);
+
+        let cli = Cli::try_parse_from(["tpt-nrg", "convert", "case.m", "--round-trip"])
+            .expect("round-trip invocation parses");
+        let Command::Convert(args) = cli.command else {
+            panic!("expected `convert`");
+        };
+        assert!(args.round_trip);
+        assert!(args.diff.is_none());
+    }
+
+    #[test]
+    fn convert_rejects_conflicting_modes() {
+        // `--diff` and `--round-trip` are two answers to one question.
+        assert!(Cli::try_parse_from([
+            "tpt-nrg",
+            "convert",
+            "case.m",
+            "--diff",
+            "case.json",
+            "--round-trip",
+        ])
+        .is_err());
+        // A diff is a report, not a file to write.
+        assert!(Cli::try_parse_from([
+            "tpt-nrg",
+            "convert",
+            "case.m",
+            "--diff",
+            "case.json",
+            "-o",
+            "report.txt",
+        ])
+        .is_err());
+        // `--against-from` only means something with `--diff`.
+        assert!(
+            Cli::try_parse_from(["tpt-nrg", "convert", "case.m", "--against-from", "psse",])
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn new_parses_the_documented_invocation() {
+        let cli = Cli::try_parse_from([
+            "tpt-nrg", "new", "my-study", "--dir", "projects", "--local", ".", "--force",
+        ])
+        .expect("documented invocation parses");
+        let Command::New(args) = cli.command else {
+            panic!("expected `new`");
+        };
+        assert_eq!(args.name, "my-study");
+        assert_eq!(args.dir, Some(PathBuf::from("projects")));
+        assert_eq!(args.local, Some(PathBuf::from(".")));
+        assert!(args.force);
+    }
+
+    #[test]
+    fn format_detection_follows_the_extension() {
+        let cases = [
+            ("case.m", tpt_nrg_interop::Format::Matpower),
+            ("case.raw", tpt_nrg_interop::Format::Psse),
+            ("case.rdf", tpt_nrg_interop::Format::Cim),
+            ("case.yml", tpt_nrg_interop::Format::Yaml),
+            ("case.csv", tpt_nrg_interop::Format::Csv),
+            ("case.json", tpt_nrg_interop::Format::Json),
+        ];
+        for (name, expected) in cases {
+            let detected = resolve_format(Path::new(name), None, tpt_nrg_interop::Format::Json)
+                .expect("a known extension is detected");
+            assert_eq!(detected, expected, "{name}");
+        }
     }
 
     #[test]

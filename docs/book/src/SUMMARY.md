@@ -6,8 +6,11 @@
 
 - [Introduction](introduction.md)
 - [Quick Start](quick-start.md)
+- [Five-minute quickstart (CLI only)](cli-quickstart.md)
+- [New project template](project-template.md)
 - [Architecture](architecture.md)
 - [Crate Status](crate-status.md)
+- [Golden-case gallery](golden-cases.md)
 
 # Tutorials
 
@@ -54,6 +57,7 @@
 
 - [`tpt-nrg-state-estimation` / `tpt-nrg-protection` / `tpt-nrg-wasm`](crate-advanced.md)
 - [Building for the browser](wasm-build.md)
+- [Browser playground](playground.md)
 
 # Reference
 

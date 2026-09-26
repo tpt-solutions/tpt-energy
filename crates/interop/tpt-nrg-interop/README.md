@@ -23,6 +23,10 @@ Rust.
 - MATPOWER write-then-read is byte-identical, so a case can be regenerated
   without a diff.
 - CIM import and export are symmetric, including the slack bus.
+- `diff` compares two systems structurally: records matched by `id` rather
+  than by position, floating-point fields compared with a tolerance, and
+  every difference reported with its path (`buses[id=4].load_mw`).
+  `round_trip` answers "is this writer lossless for this case?" in one call.
 
 ## Installation
 
@@ -54,6 +58,21 @@ match from_text(source, Format::Psse) {
     Err(e) if e.kind() == InteropErrorKind::Parse => eprintln!("malformed RAW"),
     Err(e) => eprintln!("{e}"),
 }
+# Ok::<(), tpt_nrg_interop::InteropError>(())
+```
+
+Checking that a conversion did not lose anything:
+
+```rust
+use tpt_nrg_interop::{diff_text, round_trip, Format};
+
+// Two files, in any two formats.
+for difference in diff_text(&json_case, Format::Json, &matpower_case, Format::Matpower)? {
+    println!("{}: {} -> {}", difference.path(), difference.left(), difference.right());
+}
+
+// Or one file through its own writer.
+assert!(round_trip(&matpower_case, Format::Matpower)?.is_empty());
 # Ok::<(), tpt_nrg_interop::InteropError>(())
 ```
 

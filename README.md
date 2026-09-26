@@ -5,12 +5,7 @@
 **Org:** TPT Solutions · **License:** MIT OR Apache-2.0 · **Repo:** `tpt-energy`
 
 [![CI](https://github.com/tpt-solutions/tpt-energy/actions/workflows/ci.yml/badge.svg)](https://github.com/tpt-solutions/tpt-energy/actions/workflows/ci.yml)
-[![crates.io](https://img.shields.io/crates/v/tpt-nrg-core.svg)](https://crates.io/crates/tpt-nrg-core)
-[![docs.rs](https://img.shields.io/docsrs/tpt-nrg-core.svg)](https://docs.rs/tpt-nrg-core)
-[![Codecov](https://img.shields.io/codecov/c/github/tpt-solutions/tpt-energy.svg)](https://codecov.io/gh/tpt-solutions/tpt-energy)
 [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE-MIT)
-[![crates.io](https://img.shields.io/crates/v/tpt-nrg-python.svg)](https://pypi.org/project/tpt-nrg/)
-[![npm](https://img.shields.io/npm/v/tpt-nrg.svg)](https://www.npmjs.com/package/tpt-nrg)
 
 TPT Energy is a comprehensive, open-source toolkit for power-systems engineering
 and energy-systems modeling, written in Rust and built on the TPT substrate
@@ -20,20 +15,101 @@ exploration via WebAssembly.
 
 ## Install
 
-Rust, from crates.io:
+> **Status:** no release has been published yet, so nothing is on crates.io,
+> PyPI, or npm and this repository carries no version badges for them. The
+> commands below are what the release workflow (`release.yml`) will run on the
+> first `v*.*.*` tag; until then, install from a checkout, as shown next.
+
+From a checkout, which works today:
+
+```sh
+git clone https://github.com/tpt-solutions/tpt-energy
+cd tpt-energy
+cargo install --path crates/cli/tpt-nrg-cli   # the `tpt-nrg` command
+# or run it without installing:
+cargo run -p tpt-nrg-cli -- --help
+```
+
+As a library, from a checkout:
 
 ```toml
+[dependencies]
+tpt-nrg-core = { path = "crates/core/tpt-nrg-core" }
+tpt-nrg-powerflow = { path = "crates/grid/tpt-nrg-powerflow" }
+```
+
+Once a release is published, these become the supported forms:
+
+```toml
+# crates.io
 [dependencies]
 tpt-nrg-core = "0.1"
 tpt-nrg-powerflow = "0.1"
 ```
 
-Prebuilt binaries and bindings:
-
 ```sh
 cargo install tpt-nrg-cli      # command-line interface
-pip install tpt-nrg           # Python bindings
-npm install tpt-nrg           # WebAssembly bindings
+pip install tpt-nrg            # Python bindings
+npm install tpt-nrg-wasm       # WebAssembly bindings
+```
+
+The container image needs no Rust toolchain at all:
+
+```sh
+docker run --rm -v "$PWD:/cases" ghcr.io/tpt-solutions/tpt-energy run --system /cases/case.m
+```
+
+## Five-minute quickstart (no Rust)
+
+For grid engineers who want an answer rather than a library, the CLI alone is
+enough: take a public MATPOWER case, convert it, solve it, look at it.
+
+```sh
+# 1. Get a case. The IEEE test cases are public; any `case*.m` works.
+curl -LO https://raw.githubusercontent.com/PowerAPI-Validation/Python-MATPOWER/master/powerdata/case14.m
+
+# 2. Convert it to the native JSON (MATPOWER, PSS/E, CIM, YAML, CSV all work).
+tpt-nrg convert case14.m -o case14.json
+
+# 3. Solve it. The format is inferred from the file extension.
+tpt-nrg run --system case14.json
+
+# 4. Look at it: a single-line diagram with the voltage profile.
+tpt-nrg viz --system case14.json -o case14.svg
+
+# 5. Check that the conversion did not quietly lose anything.
+tpt-nrg convert case14.m --round-trip
+```
+
+Step 5 is the one that catches bad data: it writes the case back out in the
+same format, reads it again, and compares the two models field by field. It
+exits non-zero and prints the paths that differ. To compare two cases
+directly:
+
+```sh
+tpt-nrg convert case14.json --diff other-case.m
+```
+
+Without the CLI, `tpt-nrg new my-study` scaffolds a Rust project that loads
+and solves a case, wired to this checkout:
+
+```sh
+tpt-nrg new my-study --local .
+cd my-study && cargo run
+```
+
+## Browser playground
+
+[`playground/`](playground/) is a static page that loads the WebAssembly
+build, solves a case you paste or pick, and draws the voltage profile — no
+server, no build step, no install. The `playground.yml` workflow deploys it to
+GitHub Pages on every push to `master`; locally, build the package and serve
+the directory:
+
+```sh
+tools/build-npm-package.sh
+cp -r dist/npm playground/pkg
+python -m http.server --directory playground
 ```
 
 
@@ -104,10 +180,10 @@ Every crate ships its own documentation, in its own directory:
 ## Quick Start
 
 ```toml
-# Cargo.toml
+# Cargo.toml -- from a checkout; use `tpt-nrg-core = "0.1"` once published
 [dependencies]
-tpt-nrg-core = "0.1"
-tpt-nrg-powerflow = "0.1"
+tpt-nrg-core = { path = "crates/core/tpt-nrg-core" }
+tpt-nrg-powerflow = { path = "crates/grid/tpt-nrg-powerflow" }
 ```
 
 ```rust
@@ -127,9 +203,24 @@ println!("{:?}", result);
 tpt-nrg run --system test-data/ieee/ieee14.json --method newton-raphson
 tpt-nrg run --system case.json --fault-bus 4
 tpt-nrg run --system case.json --dispatch 100
-tpt-nrg convert --from matpower --to json case14.m -o case14.json
+tpt-nrg convert case.m -o case.json
+tpt-nrg convert case.json --diff case.m          # compare two cases
+tpt-nrg convert case.m --round-trip              # check a writer is lossless
 tpt-nrg viz --system case.json -o diagram.svg
+tpt-nrg new my-study --local .                  # scaffold a project
 ```
+
+Every subcommand infers the input format from the file extension (`case.m`,
+`case.raw`, `case.rdf`, `case.yaml`, `case.csv`, `case.json`) unless `--from`
+says otherwise. `convert --diff` and `--round-trip` exit `1` when the two
+models differ, so they drop straight into a pipeline:
+
+```sh
+tpt-nrg convert case.m --round-trip || echo "the MATPOWER writer lost data"
+```
+
+The IEEE golden cases are documented as one-line commands in the
+[golden-case gallery](docs/book/src/golden-cases.md).
 
 ## Python
 

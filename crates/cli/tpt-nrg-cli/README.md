@@ -1,7 +1,7 @@
 # tpt-nrg-cli
 
-The `tpt-nrg` command-line interface: solve a case, convert it between
-formats, or draw it — without writing any Rust.
+The `tpt-nrg` command-line interface: solve a case, convert or compare it
+between formats, draw it, or scaffold a project — without writing any Rust.
 
 Part of [TPT Energy](https://github.com/tpt-solutions/tpt-energy) — power
 systems, resource modeling, storage, dispatch, and grid economics in pure
@@ -12,18 +12,23 @@ Rust.
 - `run` — Newton–Raphson, Gauss–Seidel, fast-decoupled, or DC power flow,
   plus economic dispatch, unit commitment, short circuit, and LCOE.
 - `convert` — any of MATPOWER, PSS/E, CIM, YAML, CSV, or JSON, in any
-  direction.
+  direction, plus `--diff` and `--round-trip` to check that a conversion did
+  not quietly lose a field.
 - `viz` — an SVG single-line diagram with a voltage and loading heatmap.
+- `new` — scaffold a study project that loads and solves a case.
+- The input format is inferred from the file extension, so `case.m` and
+  `case14.json` need no `--from`.
 - `table` output for a terminal, `json` for a script.
 - Exit codes that distinguish a bad input from a failed analysis: `0`
   success, `1` the analysis produced no result, `2` bad input or usage.
 - Prebuilt binaries for Linux (x86-64, aarch64), macOS (aarch64), and
-  Windows (x86-64) on every GitHub release.
+  Windows (x86-64) on every GitHub release, plus a container image on
+  GitHub Container Registry.
 
 ## Installation
 
 ```sh
-cargo install tpt-nrg-cli
+cargo install --path crates/cli/tpt-nrg-cli   # from a checkout
 ```
 
 ## Usage
@@ -48,11 +53,20 @@ tpt-nrg run --system case.json --fault-bus 4
 tpt-nrg run --system case.json \
   --lcoe-capex 5e8 --annual-energy-mwh 500000 --discount-rate 0.07
 
-# Convert a MATPOWER case to JSON
-tpt-nrg convert --from matpower --to json case14.m -o case14.json
+# Convert a MATPOWER case to JSON (the format comes from the extension)
+tpt-nrg convert case14.m -o case14.json
+
+# Check that a writer did not lose anything
+tpt-nrg convert case14.m --round-trip
+
+# Compare two cases, in different formats
+tpt-nrg convert case14.json --diff other.raw
 
 # Draw the case
 tpt-nrg viz --system case.json -o diagram.svg
+
+# Scaffold a study project wired to a checkout
+tpt-nrg new my-study --local .
 ```
 
 `--help` on any subcommand lists every flag.

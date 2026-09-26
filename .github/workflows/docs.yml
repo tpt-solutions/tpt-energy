@@ -34,4 +34,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - name: Build docs
-        run: RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps
+        # tpt-nrg-python is excluded: pyo3's `extension-module` feature (pulled
+        # in by --all-features) omits the libpython link, which fails to
+        # link on Linux. See the same exclusion in ci.yml's test job.
+        run: RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps --exclude tpt-nrg-python

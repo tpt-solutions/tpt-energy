@@ -1,0 +1,218 @@
+/* TPT Energy playground.
+   One stylesheet, no framework: the page is a demo, and a demo that needs a
+   build step is not a demo. Colours are checked for contrast against the
+   light and dark schemes. */
+
+:root {
+  color-scheme: light dark;
+  --bg: #fbfbfd;
+  --panel: #ffffff;
+  --ink: #1b1d21;
+  --muted: #5a6270;
+  --line: #d9dee6;
+  --accent: #1d4ed8;
+  --ok: #15803d;
+  --bad: #b91c1c;
+  --warn: #b45309;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14161a;
+    --panel: #1c1f25;
+    --ink: #e8eaee;
+    --muted: #a3acbb;
+    --line: #2f353f;
+    --accent: #93b4ff;
+    --ok: #6ee7a8;
+    --bad: #fca5a5;
+    --warn: #fcd34d;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0 1rem 3rem;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+header,
+main,
+footer {
+  max-width: 60rem;
+  margin: 0 auto;
+}
+
+header {
+  padding: 2rem 0 1rem;
+}
+
+h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.6rem;
+}
+
+.tagline {
+  margin: 0;
+  color: var(--muted);
+  max-width: 46rem;
+}
+
+a {
+  color: var(--accent);
+}
+
+h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+  letter-spacing: 0.01em;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 1rem 1.1rem;
+  margin: 1rem 0;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+label {
+  color: var(--muted);
+}
+
+select,
+textarea,
+button {
+  font: inherit;
+  color: inherit;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+}
+
+textarea {
+  width: 100%;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+}
+
+button {
+  background: var(--accent);
+  border-color: transparent;
+  color: #fff;
+  cursor: pointer;
+  padding: 0.45rem 1.1rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  button {
+    color: #10131a;
+  }
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.status {
+  color: var(--muted);
+}
+
+.status.ok {
+  color: var(--ok);
+}
+
+.status.error {
+  color: var(--bad);
+}
+
+details {
+  margin-top: 0.5rem;
+}
+
+summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 1rem;
+  margin: 0 0 1rem;
+}
+
+.summary dt {
+  color: var(--muted);
+}
+
+.summary dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.diagram svg {
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.table-scroll {
+  max-height: 22rem;
+  overflow: auto;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-variant-numeric: tabular-nums;
+}
+
+th,
+td {
+  text-align: right;
+  padding: 0.25rem 0.5rem;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+th:first-child,
+td:first-child {
+  text-align: left;
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+  color: var(--muted);
+  font-weight: 600;
+}
+
+footer {
+  margin-top: 1.5rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}

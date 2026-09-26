@@ -1,0 +1,13 @@
+# `cargo-generate` template for a new TPT Energy study.
+#
+#     cargo generate --git https://github.com/tpt-solutions/tpt-energy \
+#         --name my-study --subfolder templates/energy-system
+#
+# `tpt-nrg new my-study` renders the same files without needing this
+# repository to be a git remote; the two paths cannot drift because both
+# embed this directory.
+
+[template]
+# `{{crate-name}}` is derived from the project name, so the binary is named
+# after the study.
+ignore = ["_gitignore"]

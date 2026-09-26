@@ -11,6 +11,11 @@ description = "TPT Energy WebAssembly bindings for browser and edge control"
 categories = ["science", "simulation", "wasm"]
 keywords = ["power-systems", "wasm", "webassembly", "energy", "edge"]
 
+# `cdylib` is what `wasm-pack` compiles; `rlib` keeps the crate usable from the
+# rest of the workspace (and testable) in native builds.
+[lib]
+crate-type = ["cdylib", "rlib"]
+
 [lints.rust]
 unsafe_code = "forbid"
 missing_docs = "warn"

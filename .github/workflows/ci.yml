@@ -73,6 +73,24 @@ jobs:
           if cargo run -q -p tpt-nrg-cli -- run --system /dev/null; then
             echo "expected a non-zero exit for an unparseable system"; exit 1
           fi
+          # Round trip: a case written back in its own format must come out
+          # identical, or the writer is lossy.
+          cargo run -q -p tpt-nrg-cli -- convert /tmp/case.m --round-trip
+          # Diff: two different cases must be reported, and must fail the run.
+          if cargo run -q -p tpt-nrg-cli -- \
+            convert test-data/ieee/ieee14.json --diff test-data/ieee/ieee30.json; then
+            echo "expected a non-zero exit when two cases differ"; exit 1
+          fi
+          # A case is not identical across formats either: the MATPOWER
+          # writer does not carry bus names, so this is the documented case
+          # the diff mode exists to surface.
+          if cargo run -q -p tpt-nrg-cli -- \
+            convert test-data/ieee/ieee14.json --diff /tmp/case.m; then
+            echo "expected a non-zero exit for a format-migration difference"; exit 1
+          fi
+          # `new` must produce a project that builds and solves its case.
+          cargo run -q -p tpt-nrg-cli -- new smoke --dir /tmp --local . --force
+          cargo run -q --manifest-path /tmp/smoke/Cargo.toml | grep -q converged
 
   wasm:
     name: wasm32 build
@@ -138,6 +156,66 @@ jobs:
         # Generators round emitted values to 9 decimals so that libm ULP
         # differences across platforms cannot produce false positives.
         run: git diff --exit-code test-data
+
+  npm:
+    name: npm package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: jetli/wasm-pack-action@v0.4.0
+        with:
+          version: latest
+      - name: Fail on stale TypeScript declarations
+        # The published package ships a checked-in `.d.ts`. If the Rust API
+        # changed and the copy was not refreshed, `npm publish` would ship
+        # types that do not match the WebAssembly module.
+        run: tools/build-npm-package.sh --check
+      - name: Check the published manifest
+        run: |
+          tools/build-npm-package.sh
+          node -e '
+            const pkg = require("./dist/npm/package.json");
+            const required = ["tpt_nrg_wasm.js", "tpt_nrg_wasm.d.ts", "tpt_nrg_wasm_bg.wasm"];
+            for (const file of required) {
+              if (!pkg.files.includes(file)) throw new Error(file + " is not in files");
+              require("fs").accessSync("./dist/npm/" + file);
+            }
+            console.log("npm package looks publishable:", pkg.name, pkg.version);
+          '
+
+  publish-check:
+    name: publish dry run
+    runs-on: ubuntu-latest
+    # Only a manifest change can break publication, so this is the one job
+    # worth skipping on a docs-only pull request.
+    paths:
+      - "**/Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/release.yml"
+      - "tools/publish-dry-run.sh"
+      - "tools/workspace-crates.py"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Package every crate
+        run: tools/publish-dry-run.sh
+
+  badges:
+    name: README badges
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check that every registry badge points at something real
+        # A badge for a package that does not exist yet is a 404 on the front
+        # page of the project; this keeps the install section honest.
+        run: tools/check-badges.py
 
   coverage:
     name: coverage

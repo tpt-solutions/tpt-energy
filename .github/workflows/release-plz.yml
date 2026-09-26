@@ -1,0 +1,40 @@
+name: Release PR
+
+# Automates the cross-crate version bump and changelog rewrite. Publishing is
+# tag-driven and lives in `release.yml`; see `release-plz.toml` for why.
+on:
+  push:
+    branches: [master, main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  # One release PR at a time: a second run would push over the first.
+  group: release-plz-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-pr:
+    name: Open or refresh the release PR
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # release-plz needs the full history and the tags to work out what
+          # changed since the last release.
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install release-plz
+        uses: release-plz/release-plz@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Update the changelogs and versions
+        run: release-plz release --pr --token "${{ secrets.GITHUB_TOKEN }}"
+      - name: Fail if a crate cannot be packaged
+        # The release PR is worthless if the version it bumps to cannot be
+        # published, so run the same pre-flight the release workflow relies on.
+        run: tools/publish-dry-run.sh

@@ -1,0 +1,66 @@
+{
+  "id": "three-bus",
+  "name": "Three-bus study",
+  "base_mva": 100.0,
+  "frequency_hz": 60.0,
+  "buses": [
+    {
+      "id": 1,
+      "name": "Slack",
+      "type": "Slack",
+      "voltage_magnitude_pu": 1.06,
+      "voltage_angle_rad": 0.0,
+      "base_kv": 230.0
+    },
+    {
+      "id": 2,
+      "name": "Mid",
+      "type": "Pq",
+      "voltage_magnitude_pu": 1.0,
+      "base_kv": 230.0,
+      "load_mw": 40.0,
+      "load_mvar": 15.0
+    },
+    {
+      "id": 3,
+      "name": "Feeder",
+      "type": "Pq",
+      "voltage_magnitude_pu": 1.0,
+      "base_kv": 110.0,
+      "load_mw": 25.0,
+      "load_mvar": 8.0
+    }
+  ],
+  "branches": [
+    {
+      "id": 1,
+      "name": "L1",
+      "from_bus": 1,
+      "to_bus": 2,
+      "resistance_pu": 0.01,
+      "reactance_pu": 0.06,
+      "rating_mva": 120.0
+    },
+    {
+      "id": 2,
+      "name": "L2",
+      "from_bus": 2,
+      "to_bus": 3,
+      "resistance_pu": 0.02,
+      "reactance_pu": 0.08,
+      "rating_mva": 80.0
+    }
+  ],
+  "generators": [
+    {
+      "id": 1,
+      "name": "G1",
+      "bus_id": 1,
+      "type": "Thermal",
+      "p_max_mw": 120.0,
+      "p_min_mw": 20.0,
+      "p_schedule_mw": 70.0,
+      "voltage_setpoint_pu": 1.06
+    }
+  ]
+}

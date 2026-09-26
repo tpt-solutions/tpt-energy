@@ -23,6 +23,39 @@ let cim     = to_text(&system, Format::Cim)?;
 # Ok::<(), tpt_nrg_interop::InteropError>(())
 ```
 
+## Comparing two cases
+
+A conversion that silently drops a field is worse than one that fails loudly,
+so the crate can compare two systems structurally rather than textually:
+
+```rust
+use tpt_nrg_interop::{diff_text, Format};
+
+let differences = diff_text(&json_case, Format::Json, &matpower_case, Format::Matpower)?;
+for d in &differences {
+    println!("{}: {} -> {}", d.path(), d.left(), d.right());
+}
+# Ok::<(), tpt_nrg_interop::InteropError>(())
+```
+
+Each `Difference` carries a `kind` (`added`, `removed`, `changed`), a path such
+as `buses[id=4].load_mw`, and the two rendered values. Two design choices make
+the output usable on real cases:
+
+- **Records are matched by `id`, not by position.** MATPOWER, PSS/E, and CIM do
+  not all preserve record order, so a positional diff would report noise after
+  any round trip.
+- **Floating-point fields compare with a tolerance** (`1e-9` by default, scaled
+  by magnitude, and overridable through `diff_*_with_tolerance`), so a value
+  that went through a fixed-width text field is not reported as changed.
+
+`round_trip(text, format)` is the shorthand for the question "is this writer
+lossless for this case?": parse, write, parse again, compare.
+
+The CLI exposes both as `tpt-nrg convert --diff` and
+`tpt-nrg convert --round-trip`; see [`tpt-nrg-cli`](crate-cli.md) and the
+[five-minute quickstart](cli-quickstart.md).
+
 ## Errors
 
 Every failure carries an `InteropErrorKind` — a stable slug a CLI exit code,

@@ -294,7 +294,7 @@ into the state-estimation solver.
 ### Phase 7 Milestone
 - [x] Native-shim validation tests pass (`validate_system_json`, `run_powerflow_json_rejects_bad_input`, `microgrid_step_json_round_trip`)
 - [x] `WasmMicrogridController` and `ControlAction` bindings implemented (gated behind `wasm` feature)
-- [ ] Browser-based interactive power flow dashboard running end-to-end (requires `wasm32-unknown-unknown` toolchain — out of local scope)
+- [x] Browser-based interactive power flow dashboard running end-to-end *(built in the second pass: `playground/` loads the `wasm32-unknown-unknown` build, solves a chosen or pasted case, and draws the voltage profile and single-line diagram, with `playground/tests/smoke.mjs` covering the same module from Node and a GitHub Pages workflow that deploys it. What remains out of scope is the richer drag-and-drop planner listed above.)*
 
 ---
 
@@ -412,8 +412,8 @@ polish items, not fixes for broken code.
 - [x] Add YAML and CSV import for `EnergySystem` construction (JSON-only today)
 
 ### Language bindings & distribution
-- [x] Python bindings via `pyo3`/`maturin`, published to PyPI *(the crate, the `pyproject.toml`, and a 33-check API smoke test in CI are in place; the PyPI upload itself needs a `TWINE` secret, so it runs from the release workflow rather than here)*
-- [ ] Package the `tpt-nrg-wasm` `wasm-pack` output as a publishable npm package; check in or CI-generate the `.d.ts` TypeScript type definitions
+- [x] Python bindings via `pyo3`/`maturin`, published to PyPI *(the crate, the `pyproject.toml`, and a 33-check API smoke test in CI are in place; `release.yml` now has a `publish-pypi` job that runs `maturin publish` when the `PYPI_API_TOKEN` secret is set — the secret is `PYPI_API_TOKEN`, not `TWINE`, and the upload happens on a `v*.*.*` tag)*
+- [x] Package the `tpt-nrg-wasm` `wasm-pack` output as a publishable npm package; check in or CI-generate the `.d.ts` TypeScript type definitions *(`crates/core/tpt-nrg-wasm/npm/` holds the published `package.json` and README plus a checked-in `tpt_nrg_wasm.d.ts`; `tools/build-npm-package.sh` regenerates the package and `--check` fails CI when the checked-in declarations are stale. The crate needed `crate-type = ["cdylib", "rlib"]` before `wasm-pack` would build it at all.)*
 - [x] Expand the WASM surface beyond power flow/validation/microgrid-step-stub to cover dispatch, unit commitment, LCOE, and carbon intensity
 - [x] Implement real control logic for `microgrid_step_json` (currently an explicit placeholder returning empty actions)
 
@@ -421,25 +421,179 @@ polish items, not fixes for broken code.
 - [x] New minimal visualization crate: SVG single-line diagram + voltage/loading heatmap rendered from a `PowerFlowResult`
 
 ### Playground / demo
-- [ ] Hosted interactive browser playground (mdBook + WASM + the new visualization crate): pick an IEEE test case or paste a MATPOWER case, see power flow and voltage profile in-browser *(closes the browser-harness gap already flagged in Phase 7)* — the pieces it needs now exist (`wasm_visualize_json`, `wasm_economic_dispatch_json`, and the typed `WasmError` the UI switches on), so this is a static-site-plus-CI job rather than new analysis code
+- [x] Hosted interactive browser playground (mdBook + WASM + the new visualization crate): pick an IEEE test case or paste a MATPOWER case, see power flow and voltage profile in-browser *(closes the browser-harness gap already flagged in Phase 7)* — the pieces it needs now exist (`wasm_visualize_json`, `wasm_economic_dispatch_json`, and the typed `WasmError` the UI switches on), so this is a static-site-plus-CI job rather than new analysis code *(`playground/`, deployed to GitHub Pages by `.github/workflows/playground.yml`; see the Phase 12 entry for the details)*
 
 ### Adoption / usability
-- [ ] `cargo generate` project template ("new energy system project"): scaffolded `Cargo.toml` pinned to workspace crate versions, example `system.json`, and a `main.rs` that loads + solves it
+- [x] `cargo generate` project template ("new energy system project"): scaffolded `Cargo.toml` pinned to workspace crate versions, example `system.json`, and a `main.rs` that loads + solves it *(`templates/energy-system/`, also rendered by `tpt-nrg new`; see the Phase 12 entry)*
 - [x] Task-shaped worked examples: "import a MATPOWER case and run a contingency analysis," "size a battery for peak shaving from a load CSV" *(`examples/contingency-analysis.rs` verifies the MATPOWER import against the committed JSON case, then runs an N-1 sweep that ranks overloads and reports a short-circuit level; `examples/battery-sizing.rs` sizes by simulating the duty cycle and then confirms the size against the real `BatteryStorage` SoC model. Both run in the CI `examples` job. The battery example deliberately reports a bad investment: at a 0.82 load factor, holding a flat ceiling needs a 106 MWh pack, so the payback exceeds the asset life. That is the correct answer for this profile, and the example says so instead of picking a flattering size.)*
-- [x] Add README badges (build status, crates.io version, Codecov, docs.rs) *(plus license, PyPI, and npm)*
+- [x] Add README badges (build status, crates.io version, Codecov, docs.rs) *(added in Phase 10, and corrected in Phase 12: nothing is published to any registry yet, so the registry version badges were removed rather than left pointing at 404s. `tools/check-badges.py` now fails CI if one comes back before it is true)*
 
 ### Automation
-- [ ] Automate cross-crate changelog/version bumps (e.g. `release-plz` or `cargo-smart-release`), given the workspace already uses shared `[workspace.package]` versioning
+- [x] Automate cross-crate changelog/version bumps (e.g. `release-plz` or `cargo-smart-release`), given the workspace already uses shared `[workspace.package]` versioning *(`release-plz.toml` plus `.github/workflows/release-plz.yml`; publishing stays tag-driven, see the Phase 12 entry)*
 - [x] Seed a small batch of labeled "good first issue"s (e.g. the error-unification RFC and WASM error-typing fix above) to give new contributors an entry point *(five items in `.github/good-first-issues.yml`)*
 
-**Phase 11 status (2026-09-26):** 14 of 18 items are closed. Every gate is
-green locally: `cargo fmt --all -- --check`,
+**Phase 11 status (2026-09-26):** all 18 items are now closed — the npm
+package, the browser playground, the `cargo generate` template, and the release
+automation were finished in the second pass (see Phase 12). Every gate is green
+locally: `cargo fmt --all -- --check`,
 `cargo clippy --workspace --all-targets --all-features -- -D warnings`,
 `RUSTFLAGS="-D warnings" cargo test --workspace --all-features` (247 unit and
 integration tests, plus 3 doc tests), `RUSTDOCFLAGS="-D warnings" cargo doc`,
 the `wasm32-unknown-unknown` build, the Python wheel plus its 33-check smoke
 test, and the `examples/` sub-workspace (including both worked examples, which
-CI now runs). Four items remain open and are listed above: the npm package,
-the browser playground, the `cargo generate` template, and the release
-automation. Publishing to crates.io, PyPI, and npm still needs registry
-secrets and is tracked in Phase 9.
+CI now runs). Publishing to crates.io, PyPI, and npm still needs registry
+secrets and is tracked in Phase 9; the jobs that do it are now in place.
+
+---
+
+## Phase 12 — Release Reliability, Adoption & Innovation Backlog
+
+**Status (2026-09-26, second pass):** 10 of the 14 items below are closed, plus
+the four carried over from Phase 11 (npm package, browser playground,
+`cargo generate` template, release automation). Every gate is green locally:
+`cargo fmt --all -- --check`,
+`cargo clippy --workspace --all-targets --all-features -- -D warnings`,
+`RUSTFLAGS="-D warnings" cargo test --workspace --all-features` (61 test
+targets, no failures), `RUSTDOCFLAGS="-D warnings" cargo doc`, the
+`wasm32-unknown-unknown` build, the `examples/` sub-workspace,
+`tools/publish-dry-run.sh`, the playground smoke test
+(`node playground/tests/smoke.mjs`), and `tpt-nrg new --local` followed by
+`cargo run` on the generated project. The remaining items need registry
+credentials or a browser and say so where they are listed.
+
+**Origin note (2026-09-26):** items below come from a second platform review
+focused on verifying Phase 11's claims against the actual workflow/README
+code, plus new bug findings, innovation ideas, and adoption suggestions
+outside the existing backlog.
+
+### Bugs (verified against current code)
+- [x] `release.yml` publish job is broken: for every crate in the matrix it
+  runs 8 `cargo publish` steps, one per category `working-directory`
+  (`crates/core`, `crates/resource`, `crates/grid`, `crates/storage`,
+  `crates/microgrid`, `crates/dispatch`, `crates/economics`,
+  `crates/interop`), but each crate only lives in one of those directories.
+  GitHub Actions fails a step outright when `working-directory` doesn't
+  exist, so the job will fail for every crate on the next `v*.*.*` tag push,
+  which also blocks `github-release` (`needs: [publish, cli-binaries]`).
+  Fix by discovering each crate's real manifest path (e.g. via `cargo
+  metadata --workspace --format-version1` or a `find`-based lookup) instead
+  of the hard-coded 8-directory matrix. *(fixed: the matrix is gone. The job
+  lists the crates with `tools/workspace-crates.py` — which reads
+  `cargo metadata`, so a crate cannot be silently skipped — and then runs a
+  single `cargo publish --workspace`, which publishes in dependency order. A
+  missing token now fails with an explicit message instead of an
+  unauthenticated upload.)*
+- [x] `todo.md` (Phase 11) claims PyPI publishing "runs from the release
+  workflow" once a `TWINE` secret is set, but no `maturin publish` /
+  `twine upload` / `wasm-pack publish` step exists anywhere in
+  `.github/workflows/*.yml` — `maturin` only appears in `ci.yml` as a
+  build-and-smoke-test step. Add the real publish jobs (gated on
+  `secrets.PYPI_API_TOKEN` / `secrets.NPM_TOKEN`) or correct the claim.
+  *(fixed: `release.yml` gained `publish-pypi` (`maturin publish`) and
+  `publish-npm` (`tools/build-npm-package.sh`, then `npm publish`), both
+  gated on their token through the workflow-level `env`, because a job-level
+  `if:` cannot read `secrets`. The secret is `PYPI_API_TOKEN`, not `TWINE`;
+  Phase 11's wording is corrected below.)*
+- [x] `README.md` presents `pip install tpt-nrg` and `npm install tpt-nrg`
+  as available today, and carries PyPI/npm/crates.io/Codecov/docs.rs badges,
+  but nothing has ever been published to any of those registries (no tag
+  pushed yet). Soften these to a "planned" note until a first successful
+  publish, so a new user's first action doesn't 404. *(fixed: the registry
+  badges are gone, and the install section leads with a status note and the
+  commands that work today (a checkout, `cargo install --path`, the
+  container image); the registry forms are shown as what they become "once a
+  release is published". `tools/check-badges.py` in CI keeps it that way. The
+  PyPI badge was also pointing at `pypi.org` while rendering a `crates.io`
+  image, and the npm badge named `tpt-nrg` where the package is
+  `tpt-nrg-wasm`.)*
+
+### Automation
+- [x] Adopt `release-plz` (or `cargo-smart-release`) for cross-crate
+  changelog/version bumps *(carried over from Phase 11; also would have
+  caught the `release.yml` bug above since it manages publishing itself)*
+  *(`release-plz.toml` plus `.github/workflows/release-plz.yml`, which only
+  ever runs `release-plz release --pr` and then the packaging pre-flight.
+  Publishing deliberately stays tag-driven in `release.yml`: one place owns
+  crates.io, PyPI, npm, the image, and the GitHub release, and a human stays
+  between "the code is ready" and "the artifacts are public".)*
+- [x] Add a `cargo publish --dry-run` check per crate to CI on any PR that
+  touches a `Cargo.toml`, so a release-workflow regression is caught before
+  a real tag push *(the `publish-check` job, gated on a `paths:` filter, runs
+  `tools/publish-dry-run.sh`: `cargo package --list` per crate, then
+  `cargo publish --dry-run`. Before the first release the dry run cannot
+  resolve a workspace dependency that is not on crates.io yet, so exactly
+  that failure is reported as a warning naming the missing crate and the run
+  continues; every other failure fails the job. The check stops warning by
+  itself once the first tag is published.)*
+- [x] Add a badge-honesty check (manual pass or lightweight CI) confirming
+  every `README.md` badge points at a registry entry that actually exists
+  *(`tools/check-badges.py`, run by the `badges` CI job. Registry targets
+  (crates.io, PyPI, npm, docs.rs) must resolve or be listed in
+  `.github/badge-allowlist.txt` with a reason; other targets are reported as
+  warnings, because a private repository answers 404 to an anonymous
+  request. `--offline` lists what would be checked.)*
+
+### Adoption / usability
+- [x] `cargo generate` project template *(carried over from Phase 11 —
+  scaffolded `Cargo.toml`, example `system.json`, `main.rs` that loads +
+  solves it)* *(`templates/energy-system/`, usable with `cargo generate`, and
+  `tpt-nrg new <NAME>` renders the same embedded files, so the two paths
+  cannot drift. `--local` rewrites the dependencies to `path` entries, which
+  is what makes a generated project buildable before the first release; the
+  CLI validates the bundled case before writing anything, and the `cli` CI
+  job generates a project and runs it.)*
+- [x] Add a Rust-free "5-minute quickstart" to the README/book: public
+  MATPOWER case → `tpt-nrg convert` → `tpt-nrg run` → `tpt-nrg viz`, using
+  only the CLI, for adopters who are grid engineers rather than Rust
+  developers *(a "Five-minute quickstart (no Rust)" section in `README.md`
+  and `docs/book/src/cli-quickstart.md`, which also covers the study flags,
+  the round-trip check, and the exit-code contract)*
+- [x] Docker image for the CLI (`FROM scratch` + the static binary already
+  built per-OS in `release.yml`'s `cli-binaries` job) *(`Dockerfile`: a
+  multi-stage build on `rust:1-alpine` with `musl-dev`, a static
+  `x86_64-unknown-linux-musl` binary (overridable with `--build-arg
+  TARGET=`), and a `FROM scratch` runtime. `release.yml` gained a `docker`
+  job that pushes `ghcr.io/tpt-solutions/tpt-energy:<tag>` and `:latest` with
+  the buildx cache. It builds the binary in the image rather than reusing the
+  `cli-binaries` artefacts, because those are Linux-only and this has to work
+  on a developer's machine too; the image is therefore only exercised by CI,
+  not by a local run here.)*
+- [x] Golden-case gallery: document the existing IEEE 14/30/57-bus golden
+  test cases in the book as a table of one-line `tpt-nrg run` commands
+  *(`docs/book/src/golden-cases.md`, with the converged values measured from
+  the committed cases, plus the fault, dispatch, resource, and storage
+  fixtures and how to regenerate them. Linked from `README.md` and the book
+  `SUMMARY.md`.)*
+
+### Innovation
+- [x] Hosted browser playground *(carried over from Phase 11 — mdBook +
+  WASM + `tpt-nrg-viz`; the pieces (`wasm_visualize_json`,
+  `wasm_economic_dispatch_json`) already exist)*; link it from the README
+  above "Install" once live, since it's the fastest path to a user
+  experiencing the library before installing anything *(`playground/`:
+  `index.html`, `styles.css`, `app.js`, no framework and no build step
+  beyond producing `pkg/`. `.github/workflows/playground.yml` builds the
+  package, assembles the directory, runs `playground/tests/smoke.mjs`
+  against the same WebAssembly module from Node, and deploys to GitHub
+  Pages. The README section above "Install" describes running it locally
+  rather than linking a URL that only exists after the first Pages deploy.)*
+- [x] npm package for `tpt-nrg-wasm` with generated `.d.ts` *(carried over
+  from Phase 11)* *(`crates/core/tpt-nrg-wasm/npm/`: the `package.json`
+  `wasm-pack` does not generate, a checked-in `tpt_nrg_wasm.d.ts`, and a
+  registry README. This required adding `crate-type = ["cdylib", "rlib"]` to
+  the crate; without the `cdylib`, `wasm-pack` refused to build it at all.
+  `tools/build-npm-package.sh` builds the package and `--check` fails when
+  the checked-in declarations are stale; the `npm` CI job runs both, and
+  `release.yml` publishes from a tag when `NPM_TOKEN` is set.)*
+- [x] `tpt-nrg convert --diff a.raw b.m` — round-trip diff mode for format
+  migration validation, reusing the existing `from_text`/`to_text` API in
+  `tpt-nrg-interop` *(implemented in the library rather than the CLI, as
+  `tpt_nrg_interop::diff`: `diff_systems`, `diff_text`, `diff_values`, and
+  `round_trip`, with `Difference { kind, path, left, right }`. Records are
+  matched by `id` instead of by position, because no two formats preserve
+  record order the same way, and floats compare with a tolerance so a value
+  that went through a fixed-width text field is not reported as changed. The
+  CLI adds `--diff <FILE>`, `--against-from`, `--tolerance`, and
+  `--format json`, plus `--round-trip` for the single-file case, and exits
+  `1` when anything differs. In the library means the WASM and Python
+  bindings can reuse the same rules.)*

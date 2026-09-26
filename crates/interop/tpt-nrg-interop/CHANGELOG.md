@@ -24,6 +24,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   every format shares.
 - This crate-level `README.md` with crates.io `categories` and `keywords`
   metadata.
+- `diff` module: structural comparison of two energy systems
+  (`diff_systems`, `diff_text`, `diff_values`, and `round_trip`) with
+  `Difference` / `DifferenceKind`. Records are matched by `id` rather than by
+  position, floating-point fields compare with a configurable tolerance
+  (`DEFAULT_TOLERANCE`, or the `_with_tolerance` variants), and each
+  difference carries a path such as `buses[id=4].load_mw`.
+- `Format::from_path`, which infers a format from a file extension so a caller
+  does not have to repeat it.
 
 ## License
 Dual-licensed under [MIT](https://github.com/tpt-solutions/tpt-energy/blob/master/LICENSE-MIT)

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TPT Energy playground</title>
+    <meta
+      name="description"
+      content="Solve an electrical power system in the browser with the TPT Energy WebAssembly build: pick an IEEE test case, run a Newton-Raphson power flow, and see the voltage profile."
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>TPT Energy playground</h1>
+      <p class="tagline">
+        Power flow, dispatch, and voltage profiles computed by
+        <a href="https://github.com/tpt-solutions/tpt-energy">TPT Energy</a>,
+        compiled to WebAssembly. Nothing leaves your browser.
+      </p>
+    </header>
+
+    <main>
+      <section class="panel">
+        <h2>1. Choose a case</h2>
+        <div class="row">
+          <label for="case-select">Bundled case</label>
+          <select id="case-select">
+            <option value="ieee14">IEEE 14-bus</option>
+            <option value="ieee30">IEEE 30-bus</option>
+            <option value="ieee57">IEEE 57-bus</option>
+            <option value="custom">Paste your own JSON</option>
+          </select>
+        </div>
+        <div class="row">
+          <button id="solve" type="button">Solve</button>
+          <span id="status" class="status" role="status" aria-live="polite"></span>
+        </div>
+        <details>
+          <summary>Paste a case (native JSON)</summary>
+          <textarea
+            id="case-input"
+            rows="10"
+            spellcheck="false"
+            aria-label="Energy system JSON"
+          ></textarea>
+        </details>
+      </section>
+
+      <section class="panel">
+        <h2>2. Results</h2>
+        <dl class="summary" id="summary">
+          <dt>Converged</dt>
+          <dd id="converged">-</dd>
+          <dt>Iterations</dt>
+          <dd id="iterations">-</dd>
+          <dt>Active losses</dt>
+          <dd id="losses">-</dd>
+          <dt>Voltage range</dt>
+          <dd id="voltage-range">-</dd>
+        </dl>
+        <div id="diagram" class="diagram" aria-label="Single-line diagram"></div>
+      </section>
+
+      <section class="panel">
+        <h2>3. Bus voltages</h2>
+        <div class="table-scroll">
+          <table id="voltages">
+            <thead>
+              <tr>
+                <th scope="col">Bus</th>
+                <th scope="col">|V| (pu)</th>
+                <th scope="col">&theta; (rad)</th>
+                <th scope="col">P (MW)</th>
+                <th scope="col">Q (MVAr)</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <p>
+        Built from the
+        <code>tpt-nrg-wasm</code> package. Errors arrive as
+        <code>{ kind, message }</code>; <code>kind</code> is one of
+        <code>json</code>, <code>validation</code>,
+        <code>non_convergence</code>, <code>infeasible</code>,
+        <code>control</code>, <code>serialization</code>.
+      </p>
+    </footer>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

@@ -32,11 +32,16 @@
 #![deny(missing_docs)]
 
 pub mod cim;
+pub mod diff;
 mod error;
 pub mod matpower;
 pub mod psse;
 pub mod tabular;
 
+pub use diff::{
+    diff_systems, diff_systems_with_tolerance, diff_text, diff_text_with_tolerance, round_trip,
+    Difference, DifferenceKind,
+};
 pub use error::{InteropError, InteropErrorKind, InteropResult};
 pub use tpt_nrg_core::EnergySystem;
 
@@ -76,6 +81,26 @@ impl Format {
                 "format `{other}`; expected one of json, yaml, csv, matpower, psse, cim"
             ))),
         }
+    }
+
+    /// Infer the format from a file extension, so `case.m`, `case.raw`,
+    /// `case.rdf`, `case.yaml`, `case.csv`, and `case.json` can each be
+    /// detected without the caller repeating the format on the command line.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`InteropError::Unsupported`] if the path has no extension, or
+    /// [`InteropError::Unsupported`] from [`Format::parse`] if the extension
+    /// is not a supported format.
+    pub fn from_path(path: impl AsRef<std::path::Path>) -> InteropResult<Self> {
+        let path = path.as_ref();
+        let extension = path.extension().and_then(|e| e.to_str()).ok_or_else(|| {
+            InteropError::unsupported(format!(
+                "no file extension in `{}`; pass the format explicitly",
+                path.display()
+            ))
+        })?;
+        Self::parse(extension)
     }
 
     /// Canonical lower-case name.
