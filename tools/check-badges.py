@@ -53,6 +53,7 @@ PLAIN_IMAGE = re.compile(r"!\[(?P<alt>[^\]]*)\]\((?P<image>[^)\s]+)\)")
 MARKDOWN_FILES = ("README.md", "CHANGELOG.md")
 
 USER_AGENT = "tpt-energy-badge-check (+https://github.com/tpt-solutions/tpt-energy)"
+TIMEOUT_SECONDS = 20
 
 
 def markdown_files() -> list[Path]:
@@ -187,5 +188,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-
-TIMEOUT_SECONDS = 20

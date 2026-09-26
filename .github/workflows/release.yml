@@ -5,14 +5,29 @@ on:
     tags: ["v*.*.*"]
 
 env:
-  # Job-level `if:` cannot read `secrets`, so the tokens are lifted into the
-  # environment here and the publishing jobs are gated on them. A repository
-  # without a token skips the job instead of failing the whole release.
   CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
   PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
   NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
 jobs:
+  check-secrets:
+    name: Check which publish tokens are configured
+    runs-on: ubuntu-latest
+    outputs:
+      has-pypi-token: ${{ steps.check.outputs.has-pypi-token }}
+      has-npm-token: ${{ steps.check.outputs.has-npm-token }}
+    steps:
+      - name: Check secrets
+        # Job-level `if:` cannot read `secrets` or `env`, so the check runs
+        # here (where `secrets` is available) and the result is exposed as a
+        # job output that downstream jobs can gate their `if:` on. A
+        # repository without a token skips the job instead of failing the
+        # whole release.
+        id: check
+        run: |
+          echo "has-pypi-token=${{ secrets.PYPI_API_TOKEN != '' }}" >> "$GITHUB_OUTPUT"
+          echo "has-npm-token=${{ secrets.NPM_TOKEN != '' }}" >> "$GITHUB_OUTPUT"
+
   publish:
     name: Publish to crates.io
     runs-on: ubuntu-latest
@@ -41,8 +56,9 @@ jobs:
 
   publish-pypi:
     name: Publish to PyPI
+    needs: check-secrets
     runs-on: ubuntu-latest
-    if: ${{ secrets.PYPI_API_TOKEN != '' }}
+    if: needs.check-secrets.outputs.has-pypi-token == 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -62,8 +78,9 @@ jobs:
 
   publish-npm:
     name: Publish to npm
+    needs: check-secrets
     runs-on: ubuntu-latest
-    if: ${{ secrets.NPM_TOKEN != '' }}
+    if: needs.check-secrets.outputs.has-npm-token == 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

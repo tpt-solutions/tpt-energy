@@ -16,7 +16,6 @@
 
 [workspace]
 # Both the workspace-level and the per-crate changelogs are updated.
-changelog_extended = true
 changelog_update = true
 changelog_commit_message = "chore: release {{version}}"
 changelog_labels = ["changelog", "release"]
@@ -41,7 +40,6 @@ publish_time = false
 force_release = false
 
 [package]
-changelog_extended = true
 changelog_update = true
 # Per-crate changelogs, so `crates/*/<crate>/CHANGELOG.md` stay accurate.
 changelog_path = "CHANGELOG.md"
