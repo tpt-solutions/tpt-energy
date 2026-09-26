@@ -8,6 +8,8 @@ repository.workspace = true
 homepage.workspace = true
 authors.workspace = true
 description = "TPT Energy relay coordination and protection zones"
+categories = ["science", "simulation"]
+keywords = ["relay", "protection", "iec-60255", "coordination", "power-systems"]
 
 [lints.rust]
 unsafe_code = "forbid"

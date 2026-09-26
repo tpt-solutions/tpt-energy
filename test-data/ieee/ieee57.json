@@ -177,7 +177,7 @@
       "base_kv": 100.0,
       "load_mw": 27.2,
       "load_mvar": 9.8,
-      "shunt_susceptance_pu": 10.0
+      "shunt_susceptance_pu": 0.1
     },
     {
       "id": 19,
@@ -242,7 +242,7 @@
       "base_kv": 100.0,
       "load_mw": 6.3,
       "load_mvar": 3.2,
-      "shunt_susceptance_pu": 5.9
+      "shunt_susceptance_pu": 0.059
     },
     {
       "id": 26,
@@ -505,7 +505,7 @@
       "base_kv": 100.0,
       "load_mw": 20.0,
       "load_mvar": 10.0,
-      "shunt_susceptance_pu": 6.3
+      "shunt_susceptance_pu": 0.063
     },
     {
       "id": 54,

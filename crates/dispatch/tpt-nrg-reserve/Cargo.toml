@@ -8,6 +8,8 @@ repository.workspace = true
 homepage.workspace = true
 authors.workspace = true
 description = "TPT Energy spinning and contingency reserve"
+categories = ["science", "finance"]
+keywords = ["reserve", "spinning-reserve", "nerc", "contingency", "power-systems"]
 
 [lints.rust]
 unsafe_code = "forbid"

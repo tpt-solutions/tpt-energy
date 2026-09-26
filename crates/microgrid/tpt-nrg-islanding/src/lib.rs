@@ -40,12 +40,14 @@ impl Default for IslandingDetector {
 
 impl IslandingDetector {
     /// Construct a new detector with default IEEE 1547 thresholds.
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Decide whether islanding has occurred given the measured voltage
     /// (pu), frequency (Hz), and rate of change of frequency (Hz/s).
+    #[must_use]
     pub fn detect_islanding(
         &self,
         voltage_pu: f64,
@@ -84,6 +86,7 @@ pub struct TransitionResult {
 ///
 /// The strategy is: detect islanding → shed non-critical load → dispatch
 /// storage → form a new V/f reference with grid-forming inverters.
+#[must_use]
 pub fn transition_to_island(
     total_load_mw: f64,
     available_generation_mw: f64,
@@ -149,6 +152,7 @@ pub struct SyncResult {
 
 /// Resynchronize the microgrid with the main grid by matching voltage,
 /// frequency, and phase angle.
+#[must_use]
 pub fn resynchronize(
     v_microgrid: f64,
     v_grid: f64,
@@ -207,7 +211,7 @@ mod tests {
     fn transition_surplus() {
         let r = transition_to_island(5.0, 4.0, 3.0, 1.0, 60.0);
         assert!(r.success);
-        assert_eq!(r.load_shed_mw, 0.0);
+        assert!(r.load_shed_mw.abs() < 1e-12);
     }
 
     #[test]
@@ -252,7 +256,7 @@ mod tests {
         // Load 10, gen 8, storage 3: exactly 2 MW must come from storage.
         let r = transition_to_island(10.0, 8.0, 3.0, 1.0, 60.0);
         assert!(r.success);
-        assert_eq!(r.load_shed_mw, 0.0);
+        assert!(r.load_shed_mw.abs() < 1e-12);
         assert!((r.storage_dispatch_mw - 2.0).abs() < 1e-9);
     }
 
@@ -261,7 +265,7 @@ mod tests {
         // Load 5, gen 10, storage 3: generation alone covers the load.
         let r = transition_to_island(5.0, 10.0, 3.0, 1.0, 60.0);
         assert!(r.success);
-        assert_eq!(r.load_shed_mw, 0.0);
-        assert_eq!(r.storage_dispatch_mw, 0.0);
+        assert!(r.load_shed_mw.abs() < 1e-12);
+        assert!(r.storage_dispatch_mw.abs() < 1e-12);
     }
 }

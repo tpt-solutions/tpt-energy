@@ -65,6 +65,7 @@ pub struct StateEstimationResult {
 ///
 /// Solves the WLS problem `min (z - h·x)' W (z - h·x)` where `x` is the
 /// vector of bus voltage angles (slack = 0).
+#[must_use]
 pub fn run_dc_state_estimation(
     system: &EnergySystem,
     measurements: &[Measurement],

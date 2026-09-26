@@ -8,6 +8,8 @@ repository.workspace = true
 homepage.workspace = true
 authors.workspace = true
 description = "TPT Energy time-series container, resampling, and interpolation"
+categories = ["science", "data-structures"]
+keywords = ["timeseries", "resampling", "interpolation", "energy", "profiles"]
 
 [lints.rust]
 unsafe_code = "forbid"

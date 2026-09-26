@@ -39,8 +39,8 @@ pub fn solve(
 
     // Build B' (P-θ) — uses -Im(Y) including shunts.
     // Build B'' (Q-V) — uses -Im(Y) without shunts.
-    let mut bp = vec![0.0_f64; n * n];
-    let mut bpp = vec![0.0_f64; n * n];
+    let mut b_angle = vec![0.0_f64; n * n];
+    let mut b_voltage = vec![0.0_f64; n * n];
     for i in 0..n {
         for j in 0..n {
             let val_p = -b[i * n + j];
@@ -48,28 +48,28 @@ pub fn solve(
             if i == j {
                 val_q += system.buses[i].shunt_susceptance_pu;
             }
-            bp[i * n + j] = val_p;
-            bpp[i * n + j] = val_q;
+            b_angle[i * n + j] = val_p;
+            b_voltage[i * n + j] = val_q;
         }
     }
 
     // Non-slack index lists.
-    let n_theta: Vec<usize> = (0..n).filter(|&i| i != slack).collect();
-    let n_v: Vec<usize> = (0..n)
+    let angle_rows: Vec<usize> = (0..n).filter(|&i| i != slack).collect();
+    let pq_rows: Vec<usize> = (0..n)
         .filter(|&i| i != slack && system.buses[i].bus_type == BusType::Pq)
         .collect();
 
     // Reduced matrices.
-    let mut bp_red = vec![0.0_f64; n_theta.len() * n_theta.len()];
-    let mut bpp_red = vec![0.0_f64; n_v.len() * n_v.len()];
-    for (ri, &i) in n_theta.iter().enumerate() {
-        for (rj, &j) in n_theta.iter().enumerate() {
-            bp_red[ri * n_theta.len() + rj] = bp[i * n + j];
+    let mut b_angle_red = vec![0.0_f64; angle_rows.len() * angle_rows.len()];
+    let mut b_voltage_red = vec![0.0_f64; pq_rows.len() * pq_rows.len()];
+    for (ri, &i) in angle_rows.iter().enumerate() {
+        for (rj, &j) in angle_rows.iter().enumerate() {
+            b_angle_red[ri * angle_rows.len() + rj] = b_angle[i * n + j];
         }
     }
-    for (ri, &i) in n_v.iter().enumerate() {
-        for (rj, &j) in n_v.iter().enumerate() {
-            bpp_red[ri * n_v.len() + rj] = bpp[i * n + j];
+    for (ri, &i) in pq_rows.iter().enumerate() {
+        for (rj, &j) in pq_rows.iter().enumerate() {
+            b_voltage_red[ri * pq_rows.len() + rj] = b_voltage[i * n + j];
         }
     }
 
@@ -108,7 +108,7 @@ pub fn solve(
         }
 
         let mut max_mis: f64 = 0.0;
-        for &i in &n_theta {
+        for &i in &angle_rows {
             let a = dp[i].abs();
             if !a.is_finite() {
                 // f64::max silently swallows NaN — bail out on divergence.
@@ -119,7 +119,7 @@ pub fn solve(
             }
             max_mis = max_mis.max(a);
         }
-        for &i in &n_v {
+        for &i in &pq_rows {
             let a = dq[i].abs();
             if !a.is_finite() {
                 return Err(PowerFlowError::NonConvergence {
@@ -135,23 +135,23 @@ pub fn solve(
         }
 
         // Solve Δθ = B'⁻¹ · ΔP and ΔV = B''⁻¹ · ΔQ
-        let mut rhs_t = Vec::with_capacity(n_theta.len());
-        for &i in &n_theta {
+        let mut rhs_t = Vec::with_capacity(angle_rows.len());
+        for &i in &angle_rows {
             rhs_t.push(dp[i]);
         }
-        let dtheta = solve_dense(n_theta.len(), &bp_red, &rhs_t);
+        let dtheta = solve_dense(angle_rows.len(), &b_angle_red, &rhs_t);
 
-        let mut rhs_v = Vec::with_capacity(n_v.len());
-        for &i in &n_v {
+        let mut rhs_v = Vec::with_capacity(pq_rows.len());
+        for &i in &pq_rows {
             rhs_v.push(dq[i] / v[i].max(0.5));
         }
-        let dv_div = solve_dense(n_v.len(), &bpp_red, &rhs_v);
+        let dv_div = solve_dense(pq_rows.len(), &b_voltage_red, &rhs_v);
 
         // Apply updates with FDPF acceleration factor (default 1.0).
-        for (idx, &i) in n_theta.iter().enumerate() {
+        for (idx, &i) in angle_rows.iter().enumerate() {
             theta[i] += dtheta[idx];
         }
-        for (idx, &i) in n_v.iter().enumerate() {
+        for (idx, &i) in pq_rows.iter().enumerate() {
             v[i] = (v[i] + dv_div[idx] * v[i].max(0.5)).clamp(0.5, 1.5);
         }
     }

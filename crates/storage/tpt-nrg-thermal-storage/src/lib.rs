@@ -9,9 +9,9 @@ use serde::{Deserialize, Serialize};
 /// Thermal energy storage model.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ThermalStorage {
-    /// Energy capacity in MWh_th.
+    /// Energy capacity in `MWh_th`.
     pub energy_capacity_mwh_th: f64,
-    /// Charge/discharge power rating in MW_th.
+    /// Charge/discharge power rating in `MW_th`.
     pub power_rating_mw: f64,
     /// Round-trip efficiency.
     pub round_trip_efficiency: f64,
@@ -23,6 +23,7 @@ pub struct ThermalStorage {
 
 impl ThermalStorage {
     /// Construct a new thermal storage device.
+    #[must_use]
     pub fn new(
         energy_capacity_mwh_th: f64,
         power_rating_mw: f64,
@@ -38,6 +39,7 @@ impl ThermalStorage {
     }
 
     /// Set the state-of-charge bounds.
+    #[must_use]
     pub fn with_soc_bounds(mut self, min_soc: f64, initial_soc: f64) -> Self {
         self.min_soc = min_soc.clamp(0.0, 1.0);
         self.soc = initial_soc.clamp(self.min_soc, 1.0);

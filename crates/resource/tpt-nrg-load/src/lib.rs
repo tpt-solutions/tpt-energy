@@ -27,6 +27,7 @@ pub struct LoadModel {
 
 impl LoadModel {
     /// Construct a simple load model with constant shape.
+    #[must_use]
     pub fn new(base_load_mw: f64) -> Self {
         Self {
             base_load_mw,
@@ -38,6 +39,7 @@ impl LoadModel {
     }
 
     /// Set temperature sensitivity.
+    #[must_use]
     pub fn with_temperature_sensitivity(mut self, mw_per_c: f64, ref_c: f64) -> Self {
         self.temperature_sensitivity_mw_per_c = mw_per_c;
         self.reference_temperature_c = ref_c;
@@ -45,6 +47,7 @@ impl LoadModel {
     }
 
     /// Set the price elasticity.
+    #[must_use]
     pub fn with_price_elasticity(mut self, mw_per_dollar_per_mwh: f64) -> Self {
         self.price_elasticity_mw_per_dollar_per_mwh = mw_per_dollar_per_mwh;
         self
@@ -52,6 +55,7 @@ impl LoadModel {
 
     /// Set the diurnal shape: 168 multipliers (24h × 7d). Values must be
     /// non-negative.
+    #[must_use]
     pub fn with_weekly_shape(mut self, shape: Vec<f64>) -> Self {
         self.shape = shape;
         self
@@ -59,6 +63,7 @@ impl LoadModel {
 
     /// Forecast the load (MW) for the given hour-of-week (0..168), ambient
     /// temperature, and electricity price.
+    #[must_use]
     pub fn forecast_load(
         &self,
         hour_of_week: usize,
@@ -78,6 +83,7 @@ impl LoadModel {
 
     /// Compute the demand-response load reduction (MW) for a given price
     /// signal relative to a reference price.
+    #[must_use]
     pub fn demand_response(&self, price_dollar_per_mwh: f64, reference_price: f64) -> f64 {
         let delta = price_dollar_per_mwh - reference_price;
         (-self.price_elasticity_mw_per_dollar_per_mwh * delta).max(0.0)

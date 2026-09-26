@@ -8,6 +8,8 @@ repository.workspace = true
 homepage.workspace = true
 authors.workspace = true
 description = "TPT Energy battery storage and degradation"
+categories = ["science", "simulation"]
+keywords = ["battery", "state-of-charge", "li-ion", "degradation", "storage"]
 
 [lints.rust]
 unsafe_code = "forbid"

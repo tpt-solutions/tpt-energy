@@ -18,6 +18,16 @@ pub use substrate::economic_dispatch_substrate;
 
 use tpt_nrg_core::EnergySystem;
 
+/// Convert a count or index to `f64` for arithmetic.
+///
+/// Exact for magnitudes up to 2^52, far beyond any realistic count; the
+/// precision-loss allowance lives at this single documented point.
+#[must_use]
+#[allow(clippy::cast_precision_loss)]
+fn count_to_f64(value: usize) -> f64 {
+    value as f64
+}
+
 /// Unit-commitment result.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UnitCommitmentResult {
@@ -33,35 +43,32 @@ pub struct UnitCommitmentResult {
 ///
 /// Units are sorted by average full-load cost; we commit them in that
 /// order until the load is met.
+///
+/// # Panics
+///
+/// Does not panic: the sort uses a total ordering on the average cost.
+#[must_use]
 pub fn unit_commitment(system: &EnergySystem, load_profile_mw: &[f64]) -> UnitCommitmentResult {
     let n = system.generators.len();
     let t = load_profile_mw.len();
     // Compute average cost for each unit
     let mut order: Vec<usize> = (0..n).collect();
     order.sort_by(|&a, &b| {
-        let ca = system.generators[a]
-            .cost_curve
-            .as_ref()
-            .map(|c| {
-                c.segments
-                    .iter()
-                    .map(|s| s.incremental_cost_per_mwh)
-                    .sum::<f64>()
-                    / c.segments.len().max(1) as f64
-            })
-            .unwrap_or(100.0);
-        let cb = system.generators[b]
-            .cost_curve
-            .as_ref()
-            .map(|c| {
-                c.segments
-                    .iter()
-                    .map(|s| s.incremental_cost_per_mwh)
-                    .sum::<f64>()
-                    / c.segments.len().max(1) as f64
-            })
-            .unwrap_or(100.0);
-        ca.partial_cmp(&cb).unwrap()
+        let ca = system.generators[a].cost_curve.as_ref().map_or(100.0, |c| {
+            c.segments
+                .iter()
+                .map(|s| s.incremental_cost_per_mwh)
+                .sum::<f64>()
+                / count_to_f64(c.segments.len().max(1))
+        });
+        let cb = system.generators[b].cost_curve.as_ref().map_or(100.0, |c| {
+            c.segments
+                .iter()
+                .map(|s| s.incremental_cost_per_mwh)
+                .sum::<f64>()
+                / count_to_f64(c.segments.len().max(1))
+        });
+        ca.total_cmp(&cb)
     });
     let mut commitment = vec![vec![0_u8; t]; n];
     let mut outputs = vec![vec![0.0_f64; t]; n];

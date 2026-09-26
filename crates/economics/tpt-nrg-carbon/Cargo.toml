@@ -8,6 +8,8 @@ repository.workspace = true
 homepage.workspace = true
 authors.workspace = true
 description = "TPT Energy carbon intensity"
+categories = ["science"]
+keywords = ["carbon", "emissions", "co2", "intensity", "energy"]
 
 [lints.rust]
 unsafe_code = "forbid"

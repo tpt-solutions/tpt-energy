@@ -7,8 +7,10 @@ use crate::curves::{CostCurve, HeatRateCurve, PowerCurve};
 /// Type of generating unit.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Hash)]
 #[serde(rename_all = "PascalCase")]
+#[derive(Default)]
 pub enum GeneratorType {
     /// Fossil / gas / coal-fired thermal unit.
+    #[default]
     Thermal,
     /// Conventional hydroelectric unit.
     Hydro,
@@ -24,13 +26,10 @@ pub enum GeneratorType {
     Other,
 }
 
-impl Default for GeneratorType {
-    fn default() -> Self {
-        Self::Thermal
-    }
-}
-
 /// A generating unit connected to a bus.
+// `generator_type` intentionally mirrors the standard power-engineering term;
+// the "fields prefixed with the struct name" pedantic lint does not improve it.
+#[allow(clippy::struct_field_names)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Generator {
     /// Unique numeric generator id.
@@ -53,11 +52,11 @@ pub struct Generator {
     #[serde(default)]
     pub p_min_mw: f64,
 
-    /// Maximum reactive power output in MVAr.
+    /// Maximum reactive power output in `MVAr`.
     #[serde(default = "default_q_max")]
     pub q_max_mvar: f64,
 
-    /// Minimum reactive power output in MVAr.
+    /// Minimum reactive power output in `MVAr`.
     #[serde(default = "default_q_min")]
     pub q_min_mvar: f64,
 
@@ -73,7 +72,7 @@ pub struct Generator {
     #[serde(default)]
     pub cost_curve: Option<CostCurve>,
 
-    /// Heat rate curve (input MMBtu per output MWh).
+    /// Heat rate curve (input `MMBtu` per output MWh).
     #[serde(default)]
     pub heat_rate: Option<HeatRateCurve>,
 
@@ -129,12 +128,14 @@ impl Generator {
     }
 
     /// Connect this generator to a bus.
+    #[must_use]
     pub fn at_bus(mut self, bus_id: usize) -> Self {
         self.bus_id = bus_id;
         self
     }
 
     /// Set the reactive power capability range.
+    #[must_use]
     pub fn with_reactive_limits(mut self, q_min_mvar: f64, q_max_mvar: f64) -> Self {
         self.q_min_mvar = q_min_mvar;
         self.q_max_mvar = q_max_mvar;
@@ -142,30 +143,35 @@ impl Generator {
     }
 
     /// Set the scheduled active power output.
+    #[must_use]
     pub fn with_p_schedule(mut self, p_schedule_mw: f64) -> Self {
         self.p_schedule_mw = p_schedule_mw;
         self
     }
 
     /// Set the voltage setpoint in per-unit.
+    #[must_use]
     pub fn with_voltage_setpoint(mut self, voltage_setpoint_pu: f64) -> Self {
         self.voltage_setpoint_pu = voltage_setpoint_pu;
         self
     }
 
     /// Attach a cost curve.
+    #[must_use]
     pub fn with_cost_curve(mut self, cost_curve: CostCurve) -> Self {
         self.cost_curve = Some(cost_curve);
         self
     }
 
     /// Attach a heat-rate curve.
+    #[must_use]
     pub fn with_heat_rate(mut self, heat_rate: HeatRateCurve) -> Self {
         self.heat_rate = Some(heat_rate);
         self
     }
 
     /// Attach a power curve (wind/solar).
+    #[must_use]
     pub fn with_power_curve(mut self, power_curve: PowerCurve) -> Self {
         self.power_curve = Some(power_curve);
         self

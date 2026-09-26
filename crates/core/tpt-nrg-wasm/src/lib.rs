@@ -1,9 +1,9 @@
 //! # tpt-nrg-wasm
 //!
-//! WebAssembly bindings for TPT Energy.
+//! `WebAssembly` bindings for TPT Energy.
 //!
 //! This crate exposes a subset of `tpt-nrg-core`, `tpt-nrg-powerflow`, and
-//! `tpt-nrg-der` to JavaScript / TypeScript via `wasm-bindgen`. It is built
+//! `tpt-nrg-der` to `JavaScript` / `TypeScript` via `wasm-bindgen`. It is built
 //! with `wasm-pack build --target web` and consumed in browser apps.
 //!
 //! In native builds the crate compiles to a thin shim that re-exports the
@@ -72,7 +72,7 @@ pub struct ControlAction {
     pub asset_id: String,
     /// Target active power output (MW, positive = generation).
     pub target_p_mw: f64,
-    /// Target reactive power output (MVAr).
+    /// Target reactive power output (`MVAr`).
     pub target_q_mvar: f64,
     /// Target voltage setpoint (pu) if applicable.
     pub voltage_setpoint_pu: Option<f64>,
@@ -103,6 +103,11 @@ pub struct MicrogridAsset {
 }
 
 /// Run a Newton-Raphson power flow from a JSON `EnergySystem` string.
+///
+/// # Errors
+///
+/// Returns [`WasmError::Json`] if `input` is not a valid `EnergySystem`
+/// document and [`WasmError::Other`] if validation or the solve fails.
 pub fn run_powerflow_json(input: &str) -> Result<WasmPowerFlowResult, WasmError> {
     let system =
         tpt_nrg_core::EnergySystem::from_json(input).map_err(|e| WasmError::Json(e.to_string()))?;
@@ -121,6 +126,11 @@ pub fn run_powerflow_json(input: &str) -> Result<WasmPowerFlowResult, WasmError>
 }
 
 /// Validate that a JSON `EnergySystem` string parses successfully.
+///
+/// # Errors
+///
+/// Returns [`WasmError::Json`] if `input` is not a valid `EnergySystem`
+/// document.
 pub fn validate_system_json(input: &str) -> Result<(), WasmError> {
     tpt_nrg_core::EnergySystem::from_json(input)
         .map(|_| ())
@@ -134,6 +144,11 @@ pub fn validate_system_json(input: &str) -> Result<(), WasmError> {
 /// state, returns the same assets unchanged, and emits no actions. The
 /// full control logic (P/f and Q/V droops, grid-forming V/f reference,
 /// etc.) is out of local scope and will be added in a later release.
+///
+/// # Errors
+///
+/// Returns [`WasmError::Json`] if either input string is not valid JSON
+/// and [`WasmError::Other`] if serializing the actions fails.
 pub fn microgrid_step_json(
     controller_state_json: &str,
     measurements_json: &str,
@@ -153,7 +168,7 @@ pub fn microgrid_step_json(
 // ---------------------------------------------------------------------------
 #[cfg(feature = "wasm")]
 mod wasm_bindings {
-    use super::*;
+    use super::{microgrid_step_json, run_powerflow_json, validate_system_json, MicrogridState};
     use wasm_bindgen::prelude::*;
 
     #[wasm_bindgen(start)]
@@ -238,7 +253,7 @@ mod tests {
             ],
             "grid_connected": true
         }"#;
-        let measurements = r#"{}"#;
+        let measurements = r"{}";
         let actions_json = microgrid_step_json(state, measurements).expect("microgrid step");
         let parsed: Vec<ControlAction> =
             serde_json::from_str(&actions_json).expect("parse actions");

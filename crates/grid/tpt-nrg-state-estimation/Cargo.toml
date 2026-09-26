@@ -8,6 +8,8 @@ repository.workspace = true
 homepage.workspace = true
 authors.workspace = true
 description = "TPT Energy Kalman-filter grid state estimator"
+categories = ["science", "algorithms"]
+keywords = ["state-estimation", "power-systems", "scada", "filtering", "measurements"]
 
 [lints.rust]
 unsafe_code = "forbid"

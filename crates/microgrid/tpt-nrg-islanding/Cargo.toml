@@ -8,6 +8,8 @@ repository.workspace = true
 homepage.workspace = true
 authors.workspace = true
 description = "TPT Energy loss-of-mains detection and resync"
+categories = ["science", "simulation"]
+keywords = ["islanding", "microgrid", "rocof", "ieee-1547", "resynchronization"]
 
 [lints.rust]
 unsafe_code = "forbid"

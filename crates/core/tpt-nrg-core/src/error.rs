@@ -5,7 +5,8 @@ use thiserror::Error;
 /// Result alias for `tpt-nrg-core`.
 pub type CoreResult<T> = Result<T, CoreError>;
 
-/// Errors that can occur when constructing or validating an [`EnergySystem`].
+/// Errors that can occur when constructing or validating an
+/// [`EnergySystem`](crate::EnergySystem).
 #[derive(Debug, Error)]
 pub enum CoreError {
     /// A bus with the given id was not found.

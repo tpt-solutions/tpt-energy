@@ -34,6 +34,7 @@ impl CostCurve {
     /// Build a simple two-segment piecewise-linear cost curve from a minimum
     /// output, a maximum output, and the marginal cost at and above the
     /// minimum. Useful for canonical test cases.
+    #[must_use]
     pub fn piecewise(p_min: f64, p_max: f64, cost_at_min: f64, cost_at_max: f64) -> Self {
         let slope = (cost_at_max - cost_at_min) / (p_max - p_min);
         Self {
@@ -49,6 +50,7 @@ impl CostCurve {
 
     /// Evaluate the cost ($/h) at the given MW output. Returns `0.0` outside
     /// the defined range.
+    #[must_use]
     pub fn cost_at(&self, p_mw: f64) -> f64 {
         let mut total = 0.0;
         for seg in &self.segments {
@@ -65,6 +67,7 @@ impl CostCurve {
     }
 
     /// Evaluate the marginal cost ($/MWh) at the given MW output.
+    #[must_use]
     pub fn marginal_cost_at(&self, p_mw: f64) -> f64 {
         for seg in &self.segments {
             if p_mw >= seg.start_mw && p_mw < seg.end_mw {
@@ -90,11 +93,13 @@ pub struct HeatRateCurve {
 
 impl HeatRateCurve {
     /// Construct an empty curve.
+    #[must_use]
     pub fn new() -> Self {
         Self { points: Vec::new() }
     }
 
     /// Add a sample point.
+    #[must_use]
     pub fn push(mut self, p_mw: f64, heat_input_mmbtu_per_h: f64) -> Self {
         self.points.push((p_mw, heat_input_mmbtu_per_h));
         self
@@ -102,6 +107,7 @@ impl HeatRateCurve {
 
     /// Linearly interpolate the heat input at `p_mw`. Returns `0.0` if the
     /// curve is empty.
+    #[must_use]
     pub fn heat_input_at(&self, p_mw: f64) -> f64 {
         if self.points.is_empty() {
             return 0.0;
@@ -155,6 +161,7 @@ impl PowerCurve {
     }
 
     /// Add a sample point.
+    #[must_use]
     pub fn push(mut self, input: f64, output: f64) -> Self {
         self.points.push((input, output));
         self
@@ -162,6 +169,7 @@ impl PowerCurve {
 
     /// Linearly interpolate the output at the given input value. Saturates
     /// at the first / last sample outside the defined range.
+    #[must_use]
     pub fn output_at(&self, input: f64) -> f64 {
         if self.points.is_empty() {
             return 0.0;

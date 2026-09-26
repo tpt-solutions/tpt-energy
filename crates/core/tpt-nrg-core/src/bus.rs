@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 /// Classification of an electrical bus in a power-flow model.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Hash)]
 #[serde(rename_all = "PascalCase")]
+#[derive(Default)]
 pub enum BusType {
     /// Slack (swing) bus: absorbs the system imbalance; voltage magnitude and
     /// angle are fixed.
@@ -14,21 +15,19 @@ pub enum BusType {
     Pv,
     /// PQ (load) bus: active and reactive power are fixed; voltage magnitude
     /// and angle are computed.
+    #[default]
     Pq,
     /// Bus that is not electrically connected to any other.
     Isolated,
-}
-
-impl Default for BusType {
-    fn default() -> Self {
-        Self::Pq
-    }
 }
 
 /// A single electrical bus in an [`EnergySystem`](crate::EnergySystem).
 ///
 /// Voltages are in per-unit on the system base (see
 /// [`EnergySystem::base_mva`](crate::EnergySystem::base_mva)).
+// `bus_type` intentionally mirrors the standard power-engineering term; the
+// "fields prefixed with the struct name" pedantic lint does not improve it.
+#[allow(clippy::struct_field_names)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Bus {
     /// Unique numeric bus identifier.
@@ -57,7 +56,7 @@ pub struct Bus {
     #[serde(default)]
     pub load_mw: f64,
 
-    /// Reactive power load in MVAr (positive = consumption).
+    /// Reactive power load in `MVAr` (positive = consumption).
     #[serde(default)]
     pub load_mvar: f64,
 
@@ -65,7 +64,7 @@ pub struct Bus {
     #[serde(default)]
     pub generation_mw: f64,
 
-    /// Reactive power generation schedule in MVAr.
+    /// Reactive power generation schedule in `MVAr`.
     #[serde(default)]
     pub generation_mvar: f64,
 
@@ -98,10 +97,7 @@ impl Bus {
             id,
             name: name.into(),
             bus_type,
-            voltage_magnitude_pu: match bus_type {
-                BusType::Slack | BusType::Pv => 1.0,
-                _ => 1.0,
-            },
+            voltage_magnitude_pu: 1.0,
             voltage_angle_rad: 0.0,
             base_kv: default_base_kv(),
             load_mw: 0.0,
@@ -115,6 +111,7 @@ impl Bus {
     }
 
     /// Set the voltage magnitude (pu) and angle (radians) schedule.
+    #[must_use]
     pub fn with_voltage_pu(mut self, voltage_magnitude_pu: f64, voltage_angle_rad: f64) -> Self {
         self.voltage_magnitude_pu = voltage_magnitude_pu;
         self.voltage_angle_rad = voltage_angle_rad;
@@ -122,19 +119,22 @@ impl Bus {
     }
 
     /// Set the base voltage in kV.
+    #[must_use]
     pub fn with_base_kv(mut self, base_kv: f64) -> Self {
         self.base_kv = base_kv;
         self
     }
 
-    /// Set the load in MW and MVAr.
+    /// Set the load in MW and `MVAr`.
+    #[must_use]
     pub fn with_load(mut self, load_mw: f64, load_mvar: f64) -> Self {
         self.load_mw = load_mw;
         self.load_mvar = load_mvar;
         self
     }
 
-    /// Set the scheduled generation in MW and MVAr.
+    /// Set the scheduled generation in MW and `MVAr`.
+    #[must_use]
     pub fn with_generation(mut self, generation_mw: f64, generation_mvar: f64) -> Self {
         self.generation_mw = generation_mw;
         self.generation_mvar = generation_mvar;
@@ -142,6 +142,7 @@ impl Bus {
     }
 
     /// Set the shunt admittance in per-unit (G + jB).
+    #[must_use]
     pub fn with_shunt(mut self, g_pu: f64, b_pu: f64) -> Self {
         self.shunt_conductance_pu = g_pu;
         self.shunt_susceptance_pu = b_pu;

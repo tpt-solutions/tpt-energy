@@ -8,6 +8,8 @@ repository.workspace = true
 homepage.workspace = true
 authors.workspace = true
 description = "TPT Energy thermal storage"
+categories = ["science", "simulation"]
+keywords = ["thermal-storage", "storage", "heat", "energy", "simulation"]
 
 [lints.rust]
 unsafe_code = "forbid"

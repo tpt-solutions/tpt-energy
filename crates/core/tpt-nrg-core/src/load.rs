@@ -17,7 +17,7 @@ pub struct Load {
     /// Active power consumption in MW (positive = consumption).
     pub p_mw: f64,
 
-    /// Reactive power consumption in MVAr (positive = consumption).
+    /// Reactive power consumption in `MVAr` (positive = consumption).
     pub q_mvar: f64,
 
     /// Whether the load is in service.

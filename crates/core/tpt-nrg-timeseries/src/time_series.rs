@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::conv::{i64_to_f64, usize_to_f64};
 use crate::{TimeSeriesError, TimeSeriesResult};
 
 /// A time-stamped series of scalar values.
@@ -42,6 +43,11 @@ impl TimeSeries {
     }
 
     /// Verify that samples are in ascending timestamp order.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TimeSeriesError::NotSorted`] if any sample precedes its
+    /// predecessor.
     pub fn validate_sorted(&self) -> TimeSeriesResult<()> {
         for w in self.samples.windows(2) {
             if w[0].0 > w[1].0 {
@@ -72,11 +78,11 @@ impl TimeSeries {
             let (t0, v0) = w[0];
             let (t1, v1) = w[1];
             if t >= t0 && t <= t1 {
-                let span = (t1 - t0).num_milliseconds() as f64;
+                let span = i64_to_f64((t1 - t0).num_milliseconds());
                 if span == 0.0 {
                     return Some(v0);
                 }
-                let frac = (t - t0).num_milliseconds() as f64 / span;
+                let frac = i64_to_f64((t - t0).num_milliseconds()) / span;
                 return Some(v0 + frac * (v1 - v0));
             }
         }
@@ -89,7 +95,7 @@ impl TimeSeries {
         if self.samples.is_empty() {
             0.0
         } else {
-            self.samples.iter().map(|(_, v)| *v).sum::<f64>() / self.samples.len() as f64
+            self.samples.iter().map(|(_, v)| *v).sum::<f64>() / usize_to_f64(self.samples.len())
         }
     }
 }

@@ -8,6 +8,8 @@ repository.workspace = true
 homepage.workspace = true
 authors.workspace = true
 description = "TPT Energy hydroelectric power"
+categories = ["science", "simulation"]
+keywords = ["hydro", "hydropower", "turbine", "renewables", "energy"]
 
 [lints.rust]
 unsafe_code = "forbid"

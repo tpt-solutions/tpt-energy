@@ -19,6 +19,7 @@ pub struct Electrolyzer {
 
 impl Electrolyzer {
     /// Construct a new electrolyzer.
+    #[must_use]
     pub fn new(specific_energy_kwh_per_kg: f64, power_rating_mw: f64) -> Self {
         Self {
             specific_energy_kwh_per_kg,
@@ -27,12 +28,13 @@ impl Electrolyzer {
     }
 
     /// Produce hydrogen (kg) from `energy_mwh` of electricity.
+    #[must_use]
     pub fn produce_hydrogen(&self, energy_mwh: f64) -> f64 {
         if self.specific_energy_kwh_per_kg <= 0.0 {
             return 0.0;
         }
-        let energy_kwh = energy_mwh * 1000.0;
-        energy_kwh / self.specific_energy_kwh_per_kg
+        let input_kwh = energy_mwh * 1000.0;
+        input_kwh / self.specific_energy_kwh_per_kg
     }
 }
 
@@ -48,6 +50,7 @@ pub struct FuelCell {
 
 impl FuelCell {
     /// Construct a new fuel cell.
+    #[must_use]
     pub fn new(specific_energy_kwh_per_kg: f64, power_rating_mw: f64) -> Self {
         Self {
             specific_energy_kwh_per_kg,
@@ -56,6 +59,7 @@ impl FuelCell {
     }
 
     /// Generate electricity (MWh) from `hydrogen_kg` of H₂.
+    #[must_use]
     pub fn generate_electricity(&self, hydrogen_kg: f64) -> f64 {
         (self.specific_energy_kwh_per_kg * hydrogen_kg) / 1000.0
     }
@@ -76,6 +80,7 @@ pub struct HydrogenSystem {
 
 impl HydrogenSystem {
     /// Construct a new hydrogen system.
+    #[must_use]
     pub fn new(electrolyzer: Electrolyzer, fuel_cell: FuelCell, tank_capacity_kg: f64) -> Self {
         Self {
             electrolyzer,
@@ -112,6 +117,7 @@ impl HydrogenSystem {
 
     /// Round-trip efficiency (electricity → H₂ → electricity) as a
     /// fraction, assuming ideal tank.
+    #[must_use]
     pub fn round_trip_efficiency(&self) -> f64 {
         let charge_kwh = 1.0;
         let h2_kg = self.electrolyzer.produce_hydrogen(charge_kwh / 1000.0);

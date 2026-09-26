@@ -86,12 +86,14 @@ impl Branch {
     }
 
     /// Set the total line charging susceptance in per-unit.
+    #[must_use]
     pub fn with_susceptance(mut self, b_pu: f64) -> Self {
         self.susceptance_pu = b_pu;
         self
     }
 
     /// Set the transformer tap ratio and phase shift.
+    #[must_use]
     pub fn with_tap(mut self, tap_ratio: f64, phase_shift_rad: f64) -> Self {
         self.tap_ratio = tap_ratio;
         self.phase_shift_rad = phase_shift_rad;
@@ -99,12 +101,14 @@ impl Branch {
     }
 
     /// Set the long-term thermal rating in MVA.
+    #[must_use]
     pub fn with_rating(mut self, rating_mva: f64) -> Self {
         self.rating_mva = rating_mva;
         self
     }
 
     /// Mark the branch as in or out of service.
+    #[must_use]
     pub fn with_in_service(mut self, in_service: bool) -> Self {
         self.in_service = in_service;
         self

@@ -4,8 +4,6 @@ use std::collections::{HashMap, VecDeque};
 
 use tpt_nrg_core::EnergySystem;
 
-use crate::TopologyResult;
-
 /// Adjacency-list representation of the power-system network.
 ///
 /// Buses are stored in a dense, 0-indexed `Vec` keyed by [`NetworkTopology::bus_id_to_index`].
@@ -84,7 +82,13 @@ impl NetworkTopology {
 
     /// Find the shortest path between two buses using BFS (unweighted).
     ///
-    /// Returns `None` if no path exists.
+    /// Returns `None` if no path exists or either bus id is unknown.
+    ///
+    /// # Panics
+    ///
+    /// Panics during path reconstruction if the predecessor chain is
+    /// inconsistent; this can only happen if the topology was mutated
+    /// concurrently during the search, which the type system prevents.
     #[must_use]
     pub fn find_shortest_path(&self, from_bus: usize, to_bus: usize) -> Option<PathResult> {
         let start = *self.bus_id_to_index.get(&from_bus)?;
@@ -137,12 +141,6 @@ pub struct PathResult {
     pub branches: Vec<usize>,
 }
 
-/// Convenience: wrap a result in the crate-local error type.
-#[allow(dead_code)]
-pub(crate) fn _ensure<T>(r: TopologyResult<T>) -> TopologyResult<T> {
-    r
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -184,7 +182,7 @@ mod tests {
         }
         let topo = NetworkTopology::from_energy_system(&sys);
         let mut islands = topo.find_islands();
-        islands.sort_by_key(|c| c.len());
+        islands.sort_by_key(std::vec::Vec::len);
         assert_eq!(islands.len(), 2);
         assert_eq!(islands[0], vec![4]);
         assert_eq!(islands[1], vec![1, 2, 3]);

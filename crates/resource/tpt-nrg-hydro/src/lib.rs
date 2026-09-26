@@ -21,6 +21,7 @@ pub struct HydroPlant {
 
 impl HydroPlant {
     /// Construct a new hydro plant.
+    #[must_use]
     pub fn new(net_head_m: f64, efficiency: f64, max_flow_m3s: f64) -> Self {
         Self {
             net_head_m,
@@ -35,6 +36,7 @@ impl HydroPlant {
     /// Uses the standard formula:
     /// `P [W] = ρ · g · Q · H · η` with ρ = 1000 kg/m³, g = 9.81 m/s².
     /// 1 MW = 1e6 W.
+    #[must_use]
     pub fn power_output_mw(&self, flow_m3s: f64) -> f64 {
         // Below minimum turbine flow the unit is off (shut down, or
         // spilling environmentally-required flow): no generation. Clamping
@@ -71,7 +73,7 @@ mod tests {
     #[test]
     fn zero_flow_zero_power() {
         let p = HydroPlant::new(50.0, 0.90, 100.0);
-        assert_eq!(p.power_output_mw(0.0), 0.0);
+        assert!(p.power_output_mw(0.0).abs() < 1e-12);
     }
 
     #[test]
@@ -79,8 +81,8 @@ mod tests {
         let mut p = HydroPlant::new(50.0, 0.90, 100.0);
         p.min_flow_m3s = 5.0;
         // A shut-down unit (or one spilling env flow) must not generate.
-        assert_eq!(p.power_output_mw(3.0), 0.0);
-        assert_eq!(p.power_output_mw(-2.0), 0.0);
+        assert!(p.power_output_mw(3.0).abs() < 1e-12);
+        assert!(p.power_output_mw(-2.0).abs() < 1e-12);
         assert!(p.power_output_mw(5.0) > 0.0);
     }
 }

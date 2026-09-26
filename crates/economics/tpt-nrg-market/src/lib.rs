@@ -30,19 +30,22 @@ pub enum MarketType {
 
 impl MarketSignal {
     /// Construct a market signal.
+    #[must_use]
     pub fn new(market_type: MarketType, price_series: UniformTimeSeries) -> Self {
         Self {
-            market_type,
             price_series,
+            market_type,
         }
     }
 
     /// Mean price.
+    #[must_use]
     pub fn mean_price(&self) -> f64 {
         self.price_series.mean()
     }
 
     /// Peak price.
+    #[must_use]
     pub fn peak_price(&self) -> f64 {
         self.price_series.max()
     }
@@ -54,11 +57,13 @@ impl MarketSignal {
         }
         let mut sorted = self.price_series.values.clone();
         sorted.sort_by(f64::total_cmp);
-        let idx = (sorted.len() as f64 * 0.10) as usize;
+        // 10th percentile index in pure integer math (avoids float casts).
+        let idx = sorted.len() * 10 / 100;
         Some(sorted[idx.min(sorted.len() - 1)])
     }
 
     /// Price spread: peak - off-peak. Returns `None` for an empty series.
+    #[must_use]
     pub fn price_spread(&self) -> Option<f64> {
         Some(self.peak_price() - self.off_peak_price()?)
     }

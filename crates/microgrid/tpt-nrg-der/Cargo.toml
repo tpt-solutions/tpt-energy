@@ -8,6 +8,8 @@ repository.workspace = true
 homepage.workspace = true
 authors.workspace = true
 description = "TPT Energy distributed energy resources"
+categories = ["science", "simulation"]
+keywords = ["der", "microgrid", "grid-forming", "inverter", "distributed-energy"]
 
 [lints.rust]
 unsafe_code = "forbid"

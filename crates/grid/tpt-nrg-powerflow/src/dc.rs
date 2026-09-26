@@ -1,9 +1,9 @@
 //! DC power flow: linearized active-power-only flow.
 
 use tpt_nrg_core::{BusType, EnergySystem};
-use tpt_nrg_topology::AdmittanceMatrixBuilder;
+use tpt_nrg_topology::{AdmittanceMatrix, AdmittanceMatrixBuilder};
 
-use crate::result::PowerFlowResult;
+use crate::result::{BranchFlow, PowerFlowResult};
 use crate::solver::PowerFlowError;
 use crate::util::{bus_index_map, bus_schedules_pu, find_slack};
 
@@ -17,12 +17,89 @@ pub fn solve(system: &EnergySystem) -> Result<PowerFlowResult, PowerFlowError> {
     }
     let slack = find_slack(system)?;
 
-    let y = AdmittanceMatrixBuilder::new(system).build();
+    let y_bus = AdmittanceMatrixBuilder::new(system).build();
     let (p_sched, _) = bus_schedules_pu(system);
 
-    // Build B' matrix (per-unit susceptance, ignoring resistance).
-    let n_red = n - 1;
-    let mut b_red = vec![0.0_f64; n_red * n_red];
+    let (b_reduced, n_reduced) = build_b_reduced(&y_bus, n, slack);
+
+    // RHS: p_sched excluding slack
+    let rhs: Vec<f64> = p_sched
+        .iter()
+        .enumerate()
+        .filter(|&(idx, _)| idx != slack)
+        .map(|(_, &p)| p)
+        .collect();
+    let theta_reduced = solve_dense(n_reduced, &b_reduced, &rhs);
+
+    // Place the angles back (slack keeps its 0 reference angle).
+    let mut theta = vec![0.0_f64; n];
+    let non_slack_slots: Vec<&mut f64> = theta
+        .iter_mut()
+        .enumerate()
+        .filter(|&(idx, _)| idx != slack)
+        .map(|(_, angle)| angle)
+        .collect();
+    // Lengths match by construction: both exclude the slack bus.
+    for (angle, reduced_angle) in non_slack_slots.into_iter().zip(theta_reduced) {
+        *angle = reduced_angle;
+    }
+
+    // V = schedule for generator buses, 1.0 pu otherwise (DC power flow).
+    let voltages: Vec<f64> = (0..n)
+        .map(|idx| match system.buses[idx].bus_type {
+            BusType::Slack | BusType::Pv => system.buses[idx].voltage_magnitude_pu,
+            _ => 1.0,
+        })
+        .collect();
+
+    let map = bus_index_map(system);
+    let flows = dc_branch_flows(system, &map, &theta);
+    let slack_p_pu: f64 = p_sched
+        .iter()
+        .enumerate()
+        .filter(|&(idx, _)| idx != slack)
+        .map(|(_, &p)| -p)
+        .sum();
+
+    let base = system.base_mva;
+    let mut gen_p = vec![0.0_f64; system.generators.len()];
+    for (unit, gen) in system.generators.iter().enumerate() {
+        if !gen.in_service {
+            continue;
+        }
+        if let Some(Some(bus_idx)) = map.get(gen.bus_id) {
+            gen_p[unit] = if *bus_idx == slack {
+                slack_p_pu * base
+            } else {
+                p_sched[*bus_idx] * base
+            };
+        }
+    }
+    let gen_q = vec![0.0_f64; system.generators.len()];
+
+    Ok(PowerFlowResult {
+        converged: true,
+        iterations: 1,
+        final_mismatch: 0.0,
+        bus_voltage_magnitude_pu: voltages,
+        bus_voltage_angle_rad: theta,
+        branch_flows: flows,
+        total_losses_mw: 0.0,
+        total_losses_mvar: 0.0,
+        generator_p_mw: gen_p,
+        generator_q_mvar: gen_q,
+    })
+}
+
+/// Build the reduced `B'` susceptance matrix (slack row/column removed).
+///
+/// `B'[i,j] = -B[i,j]` for off-diagonals and `-B[i,i]` for the diagonal;
+/// the diagonal must be the full row sum, including the removed slack
+/// column — excluding it silently corrupts every angle in systems with
+/// more than two buses.
+fn build_b_reduced(y_bus: &AdmittanceMatrix, n: usize, slack: usize) -> (Vec<f64>, usize) {
+    let n_reduced = n - 1;
+    let mut b_reduced = vec![0.0_f64; n_reduced * n_reduced];
     let mut col = 0;
     for j in 0..n {
         if j == slack {
@@ -33,118 +110,51 @@ pub fn solve(system: &EnergySystem) -> Result<PowerFlowResult, PowerFlowError> {
             if i == slack {
                 continue;
             }
-            // B'[i,j] = -B[i,j] for off-diagonals; -B[i,i] for the diagonal.
-            // The diagonal must be the full row sum (-B_ii), including the
-            // slack row/column that was removed — excluding it silently
-            // corrupts every angle in systems with more than two buses.
-            if i == j {
-                b_red[row * n_red + col] = -y.b_ij(i, i);
+            b_reduced[row * n_reduced + col] = if i == j {
+                -y_bus.b_ij(i, i)
             } else {
-                b_red[row * n_red + col] = -y.b_ij(i, j);
-            }
+                -y_bus.b_ij(i, j)
+            };
             row += 1;
         }
         col += 1;
     }
-    // RHS: p_sched excluding slack
-    let mut rhs = Vec::with_capacity(n_red);
-    for i in 0..n {
-        if i == slack {
-            continue;
-        }
-        rhs.push(p_sched[i]);
-    }
-    let theta_red = solve_dense(n_red, &b_red, &rhs);
-    // Place the angles back
-    let mut theta = vec![0.0_f64; n];
-    let mut k = 0;
-    for i in 0..n {
-        if i == slack {
-            continue;
-        }
-        theta[i] = theta_red[k];
-        k += 1;
-    }
-    // V = 1.0 pu (DC power flow)
-    let v: Vec<f64> = (0..n)
-        .map(|i| match system.buses[i].bus_type {
-            BusType::Slack | BusType::Pv => system.buses[i].voltage_magnitude_pu,
-            _ => 1.0,
-        })
-        .collect();
+    (b_reduced, n_reduced)
+}
 
-    // Compute branch flows: P_ij = (θ_i - θ_j) / x_ij (pu)
-    let map = bus_index_map(system);
+/// Branch flows from DC angles: `P_ij = (θ_i - θ_j) / x_ij`, scaled to MW.
+/// DC ignores losses (`P_ij + P_ji = 0` for every branch).
+fn dc_branch_flows(system: &EnergySystem, map: &[Option<usize>], theta: &[f64]) -> Vec<BranchFlow> {
     let base = system.base_mva;
-    let mut flows = Vec::with_capacity(system.branches.len());
-    for br in &system.branches {
-        let i = map.get(br.from_bus).and_then(|x| *x);
-        let j = map.get(br.to_bus).and_then(|x| *x);
-        let (p_from_mw, p_to_mw) = match (i, j) {
-            (Some(i), Some(j)) => {
-                if br.reactance_pu.abs() < 1e-12 {
-                    (0.0, 0.0)
-                } else {
-                    let p_pu = (theta[i] - theta[j]) / br.reactance_pu;
+    system
+        .branches
+        .iter()
+        .map(|branch| {
+            let from_idx = map.get(branch.from_bus).and_then(|x| *x);
+            let to_idx = map.get(branch.to_bus).and_then(|x| *x);
+            let (p_from_mw, p_to_mw) = match (from_idx, to_idx) {
+                (Some(from_idx), Some(to_idx)) if branch.reactance_pu.abs() >= 1e-12 => {
+                    let p_pu = (theta[from_idx] - theta[to_idx]) / branch.reactance_pu;
                     let p_mw = p_pu * base;
                     (p_mw, -p_mw)
                 }
-            }
-            _ => (0.0, 0.0),
-        };
-        let s = p_from_mw.abs();
-        let loading = if br.rating_mva > 0.0 {
-            s / br.rating_mva
-        } else {
-            0.0
-        };
-        flows.push(crate::result::BranchFlow {
-            id: br.id,
-            p_from_mw: p_from_mw,
-            q_from_mvar: 0.0,
-            p_to_mw: p_to_mw,
-            q_to_mvar: 0.0,
-            loading_fraction: loading,
-        });
-    }
-    // DC ignores losses (P_ij + P_ji = 0 for every branch).
-
-    // Slack dispatch = negative of the sum of all other bus p_sched values
-    // (DC power balance: slack absorbs whatever is left over).
-    let mut slack_p_pu: f64 = 0.0;
-    for (i, &p) in p_sched.iter().enumerate() {
-        if i != slack {
-            slack_p_pu -= p;
-        }
-    }
-
-    let mut gen_p = vec![0.0_f64; system.generators.len()];
-    for (k, g) in system.generators.iter().enumerate() {
-        if !g.in_service {
-            continue;
-        }
-        if let Some(Some(bi)) = map.get(g.bus_id) {
-            if *bi == slack {
-                gen_p[k] = slack_p_pu * base;
+                _ => (0.0, 0.0),
+            };
+            let loading = if branch.rating_mva > 0.0 {
+                p_from_mw.abs() / branch.rating_mva
             } else {
-                gen_p[k] = p_sched[*bi] * base;
+                0.0
+            };
+            BranchFlow {
+                id: branch.id,
+                p_from_mw,
+                q_from_mvar: 0.0,
+                p_to_mw,
+                q_to_mvar: 0.0,
+                loading_fraction: loading,
             }
-        }
-    }
-    let gen_q = vec![0.0_f64; system.generators.len()];
-
-    Ok(PowerFlowResult {
-        converged: true,
-        iterations: 1,
-        final_mismatch: 0.0,
-        bus_voltage_magnitude_pu: v,
-        bus_voltage_angle_rad: theta,
-        branch_flows: flows,
-        total_losses_mw: 0.0,
-        total_losses_mvar: 0.0,
-        generator_p_mw: gen_p,
-        generator_q_mvar: gen_q,
-    })
+        })
+        .collect()
 }
 
 fn map_validate(e: tpt_nrg_core::CoreError) -> PowerFlowError {
@@ -155,46 +165,53 @@ fn map_validate(e: tpt_nrg_core::CoreError) -> PowerFlowError {
     }
 }
 
-fn solve_dense(n: usize, a_mat: &[f64], b: &[f64]) -> Vec<f64> {
+/// Dense Gaussian elimination with partial pivoting.
+fn solve_dense(n: usize, a_mat: &[f64], rhs: &[f64]) -> Vec<f64> {
     if n == 0 {
         return Vec::new();
     }
     let mut a = a_mat.to_vec();
-    let mut x = b.to_vec();
-    for k in 0..n {
-        let mut max_val = a[k * n + k].abs();
-        let mut max_row = k;
-        for r in (k + 1)..n {
-            if (a[r * n + k]).abs() > max_val {
-                max_val = a[r * n + k].abs();
-                max_row = r;
+    let mut x = rhs.to_vec();
+    for pivot_col in 0..n {
+        // Partial pivoting: move the largest remaining entry in the column
+        // to the diagonal.
+        let (max_row, _) = (pivot_col..n)
+            .map(|row| (row, a[row * n + pivot_col].abs()))
+            .fold(
+                (pivot_col, a[pivot_col * n + pivot_col].abs()),
+                |(best_row, best_val), (row, val)| {
+                    if val > best_val {
+                        (row, val)
+                    } else {
+                        (best_row, best_val)
+                    }
+                },
+            );
+        if max_row != pivot_col {
+            for col in 0..n {
+                a.swap(pivot_col * n + col, max_row * n + col);
             }
+            x.swap(pivot_col, max_row);
         }
-        if max_row != k {
-            for c in 0..n {
-                a.swap(k * n + c, max_row * n + c);
-            }
-            x.swap(k, max_row);
-        }
-        let pivot = a[k * n + k];
+        let pivot = a[pivot_col * n + pivot_col];
         if pivot.abs() < 1e-14 {
             continue;
         }
-        for r in (k + 1)..n {
-            let factor = a[r * n + k] / pivot;
-            for c in k..n {
-                a[r * n + c] -= factor * a[k * n + c];
+        for row in (pivot_col + 1)..n {
+            let factor = a[row * n + pivot_col] / pivot;
+            for col in pivot_col..n {
+                a[row * n + col] -= factor * a[pivot_col * n + col];
             }
-            x[r] -= factor * x[k];
+            x[row] -= factor * x[pivot_col];
         }
     }
-    for i in (0..n).rev() {
-        let mut sum = x[i];
-        for j in (i + 1)..n {
-            sum -= a[i * n + j] * x[j];
+    for row in (0..n).rev() {
+        let mut sum = x[row];
+        for col in (row + 1)..n {
+            sum -= a[row * n + col] * x[col];
         }
-        let diag = a[i * n + i];
-        x[i] = if diag.abs() > 1e-14 { sum / diag } else { 0.0 };
+        let diag = a[row * n + row];
+        x[row] = if diag.abs() > 1e-14 { sum / diag } else { 0.0 };
     }
     x
 }

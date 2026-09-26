@@ -8,7 +8,7 @@ use crate::position::{SolarModel, SolarPosition};
 /// Configuration for a PV plant.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PvPlantConfig {
-    /// Installed DC capacity in MWp (peak).
+    /// Installed DC capacity in `MWp` (peak).
     pub dc_capacity_mwp: f64,
     /// DC-to-AC ratio (inverter loading ratio, e.g. 1.2 for 20% DC oversizing).
     #[serde(default = "default_dc_ac")]
@@ -48,6 +48,7 @@ fn default_inv_eff() -> f64 {
 
 impl PvPlantConfig {
     /// Construct a new PV plant config.
+    #[must_use]
     pub fn new(
         dc_capacity_mwp: f64,
         tilt_deg: f64,
@@ -56,7 +57,7 @@ impl PvPlantConfig {
     ) -> Self {
         Self {
             dc_capacity_mwp,
-            dc_ac_ratio: default_dac(),
+            dc_ac_ratio: default_dc_ac(),
             tilt_deg,
             azimuth_deg,
             temp_coefficient_per_c: default_temp_coeff(),
@@ -66,10 +67,6 @@ impl PvPlantConfig {
             ambient_celsius,
         }
     }
-}
-
-fn default_dac() -> f64 {
-    1.2
 }
 
 /// A PV plant model: combines a site, config, and time-varying output
@@ -84,12 +81,14 @@ pub struct PvPlant {
 
 impl PvPlant {
     /// Construct a new plant.
+    #[must_use]
     pub fn new(site: SolarModel, config: PvPlantConfig) -> Self {
         Self { site, config }
     }
 
     /// Compute the AC power output at the given UTC timestamp, given a
     /// measured POA irradiance (W/m²).
+    #[must_use]
     pub fn output_from_poa(&self, poa_w_per_m2: f64) -> PvOutput {
         // Soiling derating
         let poa_eff = poa_w_per_m2 * (1.0 - self.config.soiling_loss);
@@ -98,23 +97,24 @@ impl PvPlant {
             self.config.ambient_celsius + (self.config.noct_celsius - 20.0) * poa_eff / 800.0;
         // DC power (linear derating with temperature)
         let stc_irradiance = 1000.0;
-        let p_dc = self.config.dc_capacity_mwp
+        let dc_power = self.config.dc_capacity_mwp
             * (poa_eff / stc_irradiance)
             * (1.0 + self.config.temp_coefficient_per_c * (cell_t - 25.0));
         // Inverter clipping
         let ac_capacity_mw = self.config.dc_capacity_mwp / self.config.dc_ac_ratio;
-        let p_ac_unclipped = p_dc * self.config.inverter_efficiency;
-        let p_ac = p_ac_unclipped.min(ac_capacity_mw).max(0.0);
+        let ac_raw = dc_power * self.config.inverter_efficiency;
+        let ac_power = ac_raw.min(ac_capacity_mw).max(0.0);
         PvOutput {
             poa_w_per_m2: poa_eff,
             cell_temperature_c: cell_t,
-            dc_power_mw: p_dc.max(0.0),
-            ac_power_mw: p_ac,
-            inverter_clipping_mw: (p_ac_unclipped - ac_capacity_mw).max(0.0),
+            dc_power_mw: dc_power.max(0.0),
+            ac_power_mw: ac_power,
+            inverter_clipping_mw: (ac_raw - ac_capacity_mw).max(0.0),
         }
     }
 
     /// Compute output using the Ineichen clear-sky model.
+    #[must_use]
     pub fn output_clearsky(&self, pos: &SolarPosition) -> PvOutput {
         let linke = 3.0;
         let irrad = clear_sky_irradiance(pos, self.site.altitude_m, linke);
@@ -122,6 +122,7 @@ impl PvPlant {
     }
 
     /// Compute output from horizontal irradiance.
+    #[must_use]
     pub fn output_from_irrad(&self, irrad: &Irradiance, pos: &SolarPosition) -> PvOutput {
         let poa =
             plane_of_array_irradiance(irrad, pos, self.config.tilt_deg, self.config.azimuth_deg);
@@ -129,6 +130,7 @@ impl PvPlant {
     }
 
     /// Compute output at a specific UTC timestamp using the clear-sky model.
+    #[must_use]
     pub fn output_at(&self, t: chrono::DateTime<chrono::Utc>) -> PvOutput {
         let pos = self.site.solar_position(t);
         self.output_clearsky(&pos)

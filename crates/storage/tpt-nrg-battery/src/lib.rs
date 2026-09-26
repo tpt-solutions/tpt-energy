@@ -65,6 +65,7 @@ fn default_ref_temp() -> f64 {
 
 impl DegradationModel {
     /// Construct a generic Li-ion degradation model.
+    #[must_use]
     pub fn li_ion() -> Self {
         Self {
             cycle_life: 5000.0,
@@ -77,6 +78,7 @@ impl DegradationModel {
     /// Calculate the capacity-fade fraction for the given cumulative
     /// equivalent full cycles and age in years, with optional derating for
     /// temperature.
+    #[must_use]
     pub fn calculate_degradation(
         &self,
         equivalent_full_cycles: f64,
@@ -119,6 +121,7 @@ pub struct BatteryStorage {
 
 impl BatteryStorage {
     /// Construct a new battery.
+    #[must_use]
     pub fn new(energy_capacity_mwh: f64, power_rating_mw: f64, round_trip_efficiency: f64) -> Self {
         Self {
             energy_capacity_mwh,
@@ -133,6 +136,7 @@ impl BatteryStorage {
     }
 
     /// Set the minimum SoC and the initial SoC.
+    #[must_use]
     pub fn with_soc(mut self, min_soc: f64, initial_soc: f64) -> Self {
         self.min_soc = min_soc.clamp(0.0, 1.0);
         self.soc = initial_soc.clamp(self.min_soc, 1.0);
@@ -140,23 +144,31 @@ impl BatteryStorage {
     }
 
     /// Attach a degradation model.
+    #[must_use]
     pub fn with_degradation(mut self, model: DegradationModel) -> Self {
         self.degradation = Some(model);
         self
     }
 
     /// Available energy above `min_soc` in MWh.
+    #[must_use]
     pub fn available_energy_mwh(&self) -> f64 {
         self.energy_capacity_mwh * (self.soc - self.min_soc).max(0.0)
     }
 
     /// Available headroom below 100% SoC in MWh.
+    #[must_use]
     pub fn headroom_energy_mwh(&self) -> f64 {
         self.energy_capacity_mwh * (1.0 - self.soc).max(0.0)
     }
 
     /// Charge the battery for `power_mw` over `duration_h` hours. Returns
     /// the actual energy delivered to the battery (after losses).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`BatteryError::InvalidInput`] for a negative duration and
+    /// [`BatteryError::SoCAboveMax`] if the resulting SoC would exceed 1.0.
     pub fn charge(&mut self, power_mw: f64, duration_h: f64) -> BatteryResult<f64> {
         if duration_h < 0.0 {
             return Err(BatteryError::InvalidInput {
@@ -184,6 +196,12 @@ impl BatteryStorage {
 
     /// Discharge the battery for `power_mw` over `duration_h` hours.
     /// Returns the actual energy delivered to the grid.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`BatteryError::InvalidInput`] for a negative duration and
+    /// [`BatteryError::SoCBelowMin`] if the resulting SoC would drop below
+    /// the configured minimum.
     pub fn discharge(&mut self, power_mw: f64, duration_h: f64) -> BatteryResult<f64> {
         if duration_h < 0.0 {
             return Err(BatteryError::InvalidInput {
@@ -211,6 +229,7 @@ impl BatteryStorage {
 
     /// Current usable capacity fraction after degradation (1.0 = no
     /// degradation).
+    #[must_use]
     pub fn capacity_factor(&self) -> f64 {
         match &self.degradation {
             Some(d) => {
@@ -241,7 +260,7 @@ mod tests {
         b.discharge(50.0, 0.5).unwrap();
         // 25 MWh delivered; stored-side draw = 25/sqrt(0.9) = 26.352 MWh
         // SoC = 80% - 26.352% ≈ 53.65%
-        assert!((b.soc - 0.536477).abs() < 1e-5, "soc = {}", b.soc);
+        assert!((b.soc - 0.536_477).abs() < 1e-5, "soc = {}", b.soc);
     }
 
     #[test]
@@ -269,7 +288,7 @@ mod tests {
         let stored = b.charge(2.5, 1.0).unwrap();
         assert!((stored - 2.25).abs() < 1e-6);
         // SoC = 0.2222 (after the discharge draw of 2.5/0.9) + 0.225
-        assert!((b.soc - 0.447222).abs() < 1e-5);
+        assert!((b.soc - 0.447_222).abs() < 1e-5);
     }
 
     #[test]

@@ -82,7 +82,7 @@ pub(crate) fn bus_schedules_pu(system: &EnergySystem) -> (Vec<f64>, Vec<f64>) {
     (p_sched, q_sched)
 }
 
-/// Per-bus load in MW / MVAr, combining bus-level and standalone loads.
+/// Per-bus load in MW / `MVAr`, combining bus-level and standalone loads.
 pub(crate) fn bus_loads_mw(system: &EnergySystem) -> (Vec<f64>, Vec<f64>) {
     let n = system.buses.len();
     let mut p = vec![0.0_f64; n];
@@ -180,13 +180,11 @@ pub(crate) fn compute_branch_flows(
     let base = system.base_mva;
     let mut flows = Vec::with_capacity(system.branches.len());
     for br in &system.branches {
-        let i = match map.get(br.from_bus).and_then(|x| *x) {
-            Some(v) => v,
-            None => continue,
+        let Some(i) = map.get(br.from_bus).and_then(|x| *x) else {
+            continue;
         };
-        let j = match map.get(br.to_bus).and_then(|x| *x) {
-            Some(v) => v,
-            None => continue,
+        let Some(j) = map.get(br.to_bus).and_then(|x| *x) else {
+            continue;
         };
         let r = br.resistance_pu;
         let x = br.reactance_pu;
@@ -238,27 +236,25 @@ pub(crate) fn compute_branch_flows(
         // Shunt current at "from" end: j·(B/2) · V_i
         let ish_re = -bc_half * vi * ti.sin();
         let ish_im = bc_half * vi * ti.cos();
-        let i_from_tot_re = i_from_re + ish_re;
-        let i_from_tot_im = i_from_im + ish_im;
+        let i_injected_from_re = i_from_re + ish_re;
+        let i_injected_from_im = i_from_im + ish_im;
         // S_from = V_i · I_from*
         let v_from_re = vi * ti.cos();
         let v_from_im = vi * ti.sin();
-        let s_from_re = v_from_re * i_from_tot_re + v_from_im * i_from_tot_im;
-        let s_from_im = -v_from_re * i_from_tot_im + v_from_im * i_from_tot_re;
+        let s_from_re = v_from_re * i_injected_from_re + v_from_im * i_injected_from_im;
+        let s_from_im = -v_from_re * i_injected_from_im + v_from_im * i_injected_from_re;
 
         // I_to_internal = -y_series · (V_from_internal − V_to) = -I_int
         // I_to (on the "to" bus side) = I_to_internal
         let i_to_re = -i_int_re;
         let i_to_im = -i_int_im;
         // Shunt current at "to" end: j·(B/2) · V_j
-        let ish2_re = -bc_half * vj * tj.sin();
-        let ish2_im = bc_half * vj * tj.cos();
-        let i_to_tot_re = i_to_re + ish2_re;
-        let i_to_tot_im = i_to_im + ish2_im;
-        let v_to_re_full = v_to_re;
-        let v_to_im_full = v_to_im;
-        let s_to_re = v_to_re_full * i_to_tot_re + v_to_im_full * i_to_tot_im;
-        let s_to_im = -v_to_re_full * i_to_tot_im + v_to_im_full * i_to_tot_re;
+        let ishunt_to_re = -bc_half * vj * tj.sin();
+        let ishunt_to_im = bc_half * vj * tj.cos();
+        let i_injected_to_re = i_to_re + ishunt_to_re;
+        let i_injected_to_im = i_to_im + ishunt_to_im;
+        let s_to_re = v_to_re * i_injected_to_re + v_to_im * i_injected_to_im;
+        let s_to_im = -v_to_re * i_injected_to_im + v_to_im * i_injected_to_re;
 
         let p_from = s_from_re * base;
         let q_from = s_from_im * base;

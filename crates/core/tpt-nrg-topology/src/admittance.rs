@@ -8,9 +8,9 @@ use tpt_nrg_core::EnergySystem;
 pub struct AdmittanceMatrix {
     /// Number of buses.
     pub n: usize,
-    /// G[i*n+j] = real part of Y[i,j] in per-unit.
+    /// `g[i*n+j]` = real part of `Y[i,j]` in per-unit.
     pub g: Vec<f64>,
-    /// B[i*n+j] = imaginary part of Y[i,j] in per-unit.
+    /// `b[i*n+j]` = imaginary part of `Y[i,j]` in per-unit.
     pub b: Vec<f64>,
 }
 
@@ -25,21 +25,21 @@ impl AdmittanceMatrix {
         }
     }
 
-    /// Real part Y[i,j].
+    /// Real part `Y[i,j]`.
     #[inline]
     #[must_use]
     pub fn g_ij(&self, i: usize, j: usize) -> f64 {
         self.g[i * self.n + j]
     }
 
-    /// Imaginary part Y[i,j].
+    /// Imaginary part `Y[i,j]`.
     #[inline]
     #[must_use]
     pub fn b_ij(&self, i: usize, j: usize) -> f64 {
         self.b[i * self.n + j]
     }
 
-    /// Complex magnitude |Y[i,j]|.
+    /// Complex magnitude `|Y[i,j]|`.
     #[must_use]
     pub fn magnitude(&self, i: usize, j: usize) -> f64 {
         let g = self.g_ij(i, j);
@@ -105,13 +105,11 @@ impl<'a> AdmittanceMatrixBuilder<'a> {
             if !br.in_service {
                 continue;
             }
-            let i = match bus_index.get(br.from_bus).and_then(|x| *x) {
-                Some(v) => v,
-                None => continue,
+            let Some(i) = bus_index.get(br.from_bus).and_then(|x| *x) else {
+                continue;
             };
-            let j = match bus_index.get(br.to_bus).and_then(|x| *x) {
-                Some(v) => v,
-                None => continue,
+            let Some(j) = bus_index.get(br.to_bus).and_then(|x| *x) else {
+                continue;
             };
 
             // Series admittance y = 1/(r + jx)
@@ -201,9 +199,8 @@ pub fn build_sparse_coo(system: &EnergySystem) -> tpt_math_linalg_sparse::CooMat
         if !br.in_service {
             continue;
         }
-        let (i, j) = match (index.get(&br.from_bus), index.get(&br.to_bus)) {
-            (Some(&i), Some(&j)) => (i, j),
-            _ => continue,
+        let (Some(&i), Some(&j)) = (index.get(&br.from_bus), index.get(&br.to_bus)) else {
+            continue;
         };
         let r = br.resistance_pu;
         let x = br.reactance_pu;
@@ -353,9 +350,9 @@ mod tests {
     ///
     /// For r = 0.01938 pu, x = 0.05917 pu, bc = 0.0528 pu:
     ///   denom   = r² + x² = 0.0038768
-    ///   g_series = r / denom ≈ 4.9994
-    ///   b_series = -x / denom ≈ -15.2629
-    ///   bc_half  = bc / 2 ≈ 0.0264
+    ///   `g_series` = r / denom ≈ 4.9994
+    ///   `b_series` = -x / denom ≈ -15.2629
+    ///   `bc_half`  = bc / 2 ≈ 0.0264
     ///
     /// Expected off-diagonal: G₁₂ ≈ -4.9994, B₁₂ ≈ +15.2629.
     /// Expected diagonal contributions to Y₁₁ from this branch:

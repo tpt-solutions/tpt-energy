@@ -19,12 +19,12 @@ pub struct PowerFlowResult {
     pub branch_flows: Vec<BranchFlow>,
     /// Total system active-power losses in MW.
     pub total_losses_mw: f64,
-    /// Total system reactive-power losses in MVAr.
+    /// Total system reactive-power losses in `MVAr`.
     pub total_losses_mvar: f64,
     /// Per-bus generation dispatch (MW). `Vec` length matches
     /// `EnergySystem::generators`.
     pub generator_p_mw: Vec<f64>,
-    /// Per-bus generation dispatch (MVAr).
+    /// Per-bus generation dispatch (`MVAr`).
     pub generator_q_mvar: Vec<f64>,
 }
 
@@ -33,13 +33,13 @@ pub struct PowerFlowResult {
 pub struct BranchFlow {
     /// Branch id.
     pub id: usize,
-    /// Active power flow from "from_bus" to "to_bus" in MW.
+    /// Active power flow from "`from_bus`" to "`to_bus`" in MW.
     pub p_from_mw: f64,
-    /// Reactive power flow from "from_bus" to "to_bus" in MVAr.
+    /// Reactive power flow from "`from_bus`" to "`to_bus`" in `MVAr`.
     pub q_from_mvar: f64,
-    /// Active power flow from "to_bus" to "from_bus" in MW.
+    /// Active power flow from "`to_bus`" to "`from_bus`" in MW.
     pub p_to_mw: f64,
-    /// Reactive power flow from "to_bus" to "from_bus" in MVAr.
+    /// Reactive power flow from "`to_bus`" to "`from_bus`" in `MVAr`.
     pub q_to_mvar: f64,
     /// Apparent power loading as a fraction of `rating_mva` (0 if unset).
     pub loading_fraction: f64,

@@ -18,6 +18,9 @@ pub enum SkyCondition {
 }
 
 /// Clear-sky irradiance components at a horizontal surface.
+// The `_w_per_m2` suffixes intentionally carry the unit into every field
+// name; the same-postfix pedantic lint does not improve them.
+#[allow(clippy::struct_field_names)]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Irradiance {
     /// Global horizontal irradiance in W/m².
@@ -57,7 +60,7 @@ pub fn clear_sky_irradiance(
     }
     // Extraterrestrial normal irradiance (solar constant with seasonal
     // variation due to Earth-Sun distance).
-    let day_of_year = pos.timestamp.ordinal() as f64;
+    let day_of_year = f64::from(pos.timestamp.ordinal());
     let e0 = 1361.0 * (1.0 + 0.033 * (2.0 * std::f64::consts::PI * day_of_year / 365.0).cos());
     let am = pos.air_mass;
     if !am.is_finite() || am <= 0.0 {
@@ -71,13 +74,13 @@ pub fn clear_sky_irradiance(
     let c = (0.98 - 0.00146 * linke_turbidity).max(0.3);
     let pressure_ratio = (-altitude_m / 8000.0).exp();
     let dni = a * e0 * (b * am * pressure_ratio).exp();
-    let dni_capped = dni.max(0.0).min(1400.0);
+    let dni_capped = dni.clamp(0.0, 1400.0);
 
     // Diffuse horizontal from Ineichen (simplified)
     let dhi = 0.05
         * e0
         * (90.0 - zenith_deg).to_radians().sin().max(0.0)
-        * (-1.0 * (linke_turbidity - 1.0) / 8.0).exp();
+        * (-(linke_turbidity - 1.0) / 8.0).exp();
     // `c` is the turbidity-derived atmospheric clearness factor applied to
     // total global irradiance.
     let ghi = (dni_capped * cos_zenith + dhi) * c;

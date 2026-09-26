@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::conv::{i64_to_f64, usize_to_f64};
 use crate::time_series::TimeSeries;
 use crate::{TimeSeriesError, TimeSeriesResult};
 
@@ -26,7 +27,7 @@ pub struct UniformTimeSeries {
     pub step_seconds: i64,
     /// Sample values (length = `n`).
     pub values: Vec<f64>,
-    /// Human-readable name (e.g. "load_mw").
+    /// Human-readable name (e.g. "`load_mw`").
     pub name: String,
     /// Units string (e.g. "MW", "$/MWh").
     pub units: String,
@@ -73,7 +74,7 @@ impl UniformTimeSeries {
     #[must_use]
     pub fn integrate_mwh(&self) -> f64 {
         // sum(MW) * step(h) = MWh
-        let step_h = self.step_seconds as f64 / 3600.0;
+        let step_h = i64_to_f64(self.step_seconds) / 3600.0;
         self.values.iter().sum::<f64>() * step_h
     }
 
@@ -83,7 +84,7 @@ impl UniformTimeSeries {
         if self.values.is_empty() {
             0.0
         } else {
-            self.values.iter().sum::<f64>() / self.values.len() as f64
+            self.values.iter().sum::<f64>() / usize_to_f64(self.values.len())
         }
     }
 
@@ -107,29 +108,37 @@ impl UniformTimeSeries {
     /// `new_step_seconds` must be a positive integer multiple (downsampling)
     /// or divisor (upsampling) of the current step. Decimation is performed
     /// by averaging; upsampling uses the requested [`ResampleMethod`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TimeSeriesError::InvalidStep`] for non-positive steps,
+    /// [`TimeSeriesError::Empty`] for an empty series, and
+    /// [`TimeSeriesError::IncommensurateStep`] when the two grids cannot be
+    /// mapped onto each other exactly.
     pub fn resample(
         &self,
         new_step_seconds: i64,
         method: ResampleMethod,
     ) -> TimeSeriesResult<UniformTimeSeries> {
         if new_step_seconds <= 0 {
-            return Err(TimeSeriesError::InvalidStep(new_step_seconds as f64));
+            return Err(TimeSeriesError::InvalidStep(new_step_seconds));
         }
         if self.step_seconds <= 0 {
-            return Err(TimeSeriesError::InvalidStep(self.step_seconds as f64));
+            return Err(TimeSeriesError::InvalidStep(self.step_seconds));
         }
         if self.values.is_empty() {
             return Err(TimeSeriesError::Empty);
         }
         if new_step_seconds >= self.step_seconds {
             if new_step_seconds % self.step_seconds != 0 {
-                return Err(TimeSeriesError::IncommensurateStep(new_step_seconds as f64));
+                return Err(TimeSeriesError::IncommensurateStep(new_step_seconds));
             }
             // Downsample: average
-            let factor = (new_step_seconds / self.step_seconds) as usize;
+            let factor = usize::try_from(new_step_seconds / self.step_seconds)
+                .map_err(|_| TimeSeriesError::InvalidStep(new_step_seconds))?;
             let mut values = Vec::new();
             for chunk in self.values.chunks(factor) {
-                let avg = chunk.iter().sum::<f64>() / chunk.len() as f64;
+                let avg = chunk.iter().sum::<f64>() / usize_to_f64(chunk.len());
                 values.push(avg);
             }
             Ok(UniformTimeSeries {
@@ -141,16 +150,17 @@ impl UniformTimeSeries {
             })
         } else {
             if self.step_seconds % new_step_seconds != 0 {
-                return Err(TimeSeriesError::IncommensurateStep(new_step_seconds as f64));
+                return Err(TimeSeriesError::IncommensurateStep(new_step_seconds));
             }
             // Upsample via interpolation
-            let factor = (self.step_seconds / new_step_seconds) as usize;
+            let factor = usize::try_from(self.step_seconds / new_step_seconds)
+                .map_err(|_| TimeSeriesError::InvalidStep(self.step_seconds))?;
             let mut values = Vec::with_capacity((self.values.len() - 1) * factor + 1);
             for w in self.values.windows(2) {
                 let (v0, v1) = (w[0], w[1]);
                 values.push(v0);
                 for k in 1..factor {
-                    let t = k as f64 / factor as f64;
+                    let t = usize_to_f64(k) / usize_to_f64(factor);
                     let v = match method {
                         ResampleMethod::Step => v0,
                         ResampleMethod::Linear => v0 + t * (v1 - v0),
@@ -158,7 +168,9 @@ impl UniformTimeSeries {
                     values.push(v);
                 }
             }
-            values.push(*self.values.last().unwrap());
+            if let Some(&last) = self.values.last() {
+                values.push(last);
+            }
             Ok(UniformTimeSeries {
                 name: self.name.clone(),
                 units: self.units.clone(),
@@ -177,6 +189,13 @@ impl From<UniformTimeSeries> for TimeSeries {
             .iter()
             .enumerate()
             .map(|(i, &v)| {
+                // A series with more than i64::MAX samples cannot exist in
+                // memory, so the index conversion cannot wrap or truncate.
+                #[allow(
+                    clippy::cast_possible_truncation,
+                    clippy::cast_possible_wrap,
+                    clippy::cast_sign_loss
+                )]
                 let t = u.start + chrono::Duration::seconds(i as i64 * u.step_seconds);
                 (t, v)
             })

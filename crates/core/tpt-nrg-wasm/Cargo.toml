@@ -8,6 +8,8 @@ repository.workspace = true
 homepage.workspace = true
 authors.workspace = true
 description = "TPT Energy WebAssembly bindings for browser and edge control"
+categories = ["science", "simulation", "wasm"]
+keywords = ["power-systems", "wasm", "webassembly", "energy", "edge"]
 
 [lints.rust]
 unsafe_code = "forbid"

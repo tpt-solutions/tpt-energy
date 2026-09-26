@@ -5,6 +5,13 @@
 use chrono::{DateTime, Utc};
 use tpt_nrg_solar::{SolarModel, SolarPosition};
 
+
+/// Round to 9 decimal places so regenerated fixtures are byte-stable
+/// across platforms (libm ulp differences must not fail the drift guard).
+fn round9(x: f64) -> f64 {
+    (x * 1.0e9).round() / 1.0e9
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let here = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
     let out_path = here
@@ -30,12 +37,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let pos: SolarPosition = model.solar_position(dt);
             serde_json::json!({
                 "timestamp": s,
-                "zenith_deg": pos.zenith_deg,
-                "azimuth_deg": pos.azimuth_deg,
-                "altitude_deg": pos.altitude_deg,
-                "declination_deg": pos.declination_deg,
-                "hour_angle_deg": pos.hour_angle_deg,
-                "air_mass": if pos.air_mass.is_finite() { pos.air_mass } else { f64::NAN },
+                "zenith_deg": round9(pos.zenith_deg),
+                "azimuth_deg": round9(pos.azimuth_deg),
+                "altitude_deg": round9(pos.altitude_deg),
+                "declination_deg": round9(pos.declination_deg),
+                "hour_angle_deg": round9(pos.hour_angle_deg),
+                "air_mass": if pos.air_mass.is_finite() { round9(pos.air_mass) } else { f64::NAN },
             })
         })
         .collect();

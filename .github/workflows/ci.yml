@@ -46,6 +46,35 @@ jobs:
       - name: Run doc tests
         run: cargo test --workspace --all-features --doc
 
+  examples:
+    name: examples build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build and run examples sub-workspace
+        # examples/ is its own cargo workspace, so `--workspace` above does
+        # not compile it; do that explicitly here.
+        run: |
+          cargo check --manifest-path examples/Cargo.toml --all-targets
+          cargo run --manifest-path examples/Cargo.toml --bin ieee-14-bus-powerflow
+
+  golden-drift:
+    name: golden fixture drift guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Regenerate golden fixtures
+        run: |
+          cargo run --manifest-path examples/Cargo.toml --bin generate-ieee-goldens
+          cargo run --manifest-path examples/Cargo.toml --bin generate-solar-goldens
+          cargo run --manifest-path examples/Cargo.toml --bin generate-wind-goldens
+      - name: Fail on fixture drift
+        # Generators round emitted values to 9 decimals so that libm ULP
+        # differences across platforms cannot produce false positives.
+        run: git diff --exit-code test-data
+
   coverage:
     name: coverage
     runs-on: ubuntu-latest

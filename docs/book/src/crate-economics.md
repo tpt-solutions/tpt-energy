@@ -42,7 +42,14 @@ let sig = MarketSignal::new(MarketType::DayAhead, ts);
 
 println!("mean = {:.2}", sig.mean_price());
 println!("peak = {:.2}", sig.peak_price());
-println!("spread = {:.2}", sig.price_spread());
+// Off-peak (10th percentile) and spread return Option<f64> — `None` for an
+// empty series:
+if let Some(off_peak) = sig.off_peak_price() {
+    println!("off-peak = {off_peak:.2}");
+}
+if let Some(spread) = sig.price_spread() {
+    println!("spread = {spread:.2}");
+}
 ```
 
 ## `tpt-nrg-carbon`

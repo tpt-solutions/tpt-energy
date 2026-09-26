@@ -11,12 +11,12 @@ Per-crate maturity table. Statuses follow the conventions:
 | `tpt-nrg-core` | Stable | `EnergySystem` data model, JSON (de)serialisation. |
 | `tpt-nrg-topology` | Stable | Island detection, shortest path, Y-bus builder. |
 | `tpt-nrg-timeseries` | Stable | Uniform and irregular time-series, resampling, interpolation. |
-| `tpt-nrg-powerflow` | Stable | NR / Gauss-Seidel / Fast-Decoupled / DC. Validated against MATPOWER IEEE 14-bus and 30-bus. |
+| `tpt-nrg-powerflow` | Stable | NR (with Q-limit enforcement) / Gauss-Seidel / Fast-Decoupled / DC. IEEE 14/30-bus and IEEE 57-bus validated against the published MATPOWER solutions (<1%). |
 | `tpt-nrg-fault` | Stable | Symmetrical / line-to-line / line-to-ground / double-line-to-ground. |
 | `tpt-nrg-state-estimation` | Alpha | DC-approximation WLS only; full non-linear WLS planned. |
 | `tpt-nrg-protection` | Stable | IEC 60255-151 inverse-time curves and coordination checks. |
 | `tpt-nrg-solar` | Stable | SPA-equivalent position, Ineichen clear-sky, POA transposition, NOCT PV output. |
-| `tpt-nrg-wind` | Stable | Log/power-law vertical extrapolation, Weibull PDF, Jensen / Frandsen / eddy-viscosity wake models. |
+| `tpt-nrg-wind` | Stable | Log/power-law vertical extrapolation, Weibull PDF, Jensen / Frandsen / eddy-viscosity wake models (each with a golden fixture). |
 | `tpt-nrg-hydro` | Stable | Head × flow × efficiency model. |
 | `tpt-nrg-load` | Stable | Diurnal/weekly shape, temperature sensitivity, price elasticity. |
 | `tpt-nrg-battery` | Stable | SoC tracking, round-trip efficiency, cycle/calendar degradation. |
@@ -37,9 +37,11 @@ Per-crate maturity table. Statuses follow the conventions:
 
 | Concern | Status |
 |---------|--------|
-| CI (fmt + clippy + test on Linux/Windows/macOS) | Stable |
+| CI (fmt + clippy + test + docs on Linux/Windows/macOS) | Stable |
 | License audit (`cargo deny`) | Stable |
-| Benchmarks | Planned (`benches/` stubs exist) |
+| Examples build (`examples/` sub-workspace) | Stable |
+| Golden-fixture drift guard | Stable |
+| Benchmarks (criterion) | Alpha (`benches/` wired; baselines not yet tracked) |
 | Cross-repo integration tests | Planned (substrate crates live in separate repos) |
 | Standards compliance (IEC 61850 / 61970, NERC) | Planned |
 | crates.io publish | Planned |

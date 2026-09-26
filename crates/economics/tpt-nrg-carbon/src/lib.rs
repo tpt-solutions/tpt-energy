@@ -12,6 +12,7 @@ use tpt_nrg_core::{EnergySystem, GeneratorType};
 /// These are typical lifecycle values (combustion only for fossil fuels,
 /// lifecycle for renewables). The exact source (e.g. EPA eGRID, IPCC) is a
 /// user choice; defaults are reasonable midpoints.
+#[must_use]
 pub fn emission_factor_kg_per_mwh(fuel: GeneratorType) -> f64 {
     match fuel {
         GeneratorType::Thermal => 900.0, // gas / coal average
@@ -27,6 +28,7 @@ pub fn emission_factor_kg_per_mwh(fuel: GeneratorType) -> f64 {
 /// Carbon intensity of the current dispatch (kg CO₂ per MWh) computed as
 /// the weighted average of generator emission factors by their current
 /// scheduled output.
+#[must_use]
 pub fn carbon_intensity(system: &EnergySystem) -> f64 {
     let mut total_mwh = 0.0;
     let mut total_co2 = 0.0;
@@ -48,6 +50,7 @@ pub fn carbon_intensity(system: &EnergySystem) -> f64 {
 
 /// Carbon emissions (tonnes CO₂) over a period at a given average output
 /// and duration.
+#[must_use]
 pub fn total_emissions_tonnes(system: &EnergySystem, duration_h: f64) -> f64 {
     let total_kg: f64 = system
         .generators

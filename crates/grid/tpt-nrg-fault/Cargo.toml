@@ -8,6 +8,8 @@ repository.workspace = true
 homepage.workspace = true
 authors.workspace = true
 description = "TPT Energy short-circuit (fault) analysis"
+categories = ["science", "simulation"]
+keywords = ["short-circuit", "fault", "symmetrical-components", "protection", "power-systems"]
 
 [lints.rust]
 unsafe_code = "forbid"

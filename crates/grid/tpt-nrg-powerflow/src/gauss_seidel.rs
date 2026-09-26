@@ -12,6 +12,11 @@ use crate::util::{
 
 /// Solve the AC power flow using the Gauss–Seidel method with optional
 /// acceleration.
+///
+/// The iterative kernel is kept as one function: splitting the sweep out
+/// of the convergence loop would scatter the update equations that are
+/// meant to be read together.
+#[allow(clippy::too_many_lines)]
 pub fn solve(
     system: &EnergySystem,
     options: PowerFlowOptions,

@@ -82,12 +82,14 @@ pub struct FaultAnalyzer<'a> {
 
 impl<'a> FaultAnalyzer<'a> {
     /// Create a new fault analyzer.
+    #[must_use]
     pub fn new(system: &'a EnergySystem) -> Self {
         Self { system }
     }
 
     /// Compute the positive-sequence Thevenin impedance at the given bus
     /// by inverting the Y-bus and looking at the diagonal entry.
+    #[must_use]
     pub fn z1_thevenin(&self, bus: usize) -> f64 {
         let y = AdmittanceMatrixBuilder::new(self.system).build();
         let n = y.n;
@@ -105,6 +107,7 @@ impl<'a> FaultAnalyzer<'a> {
     /// For systems where per-sequence branch impedances are known, override
     /// the returned values before passing them to
     /// [`FaultAnalyzer::fault_from_sequence`].
+    #[must_use]
     pub fn sequence_network(&self, bus: usize) -> SequenceNetwork {
         let z1 = self.z1_thevenin_radial(bus);
         SequenceNetwork {
@@ -118,6 +121,7 @@ impl<'a> FaultAnalyzer<'a> {
     /// network. This is the building block used by the higher-level
     /// [`FaultAnalyzer::calculate_fault_current`] but lets the caller
     /// override the defaulting assumptions about Z₂ and Z₀.
+    #[must_use]
     pub fn fault_from_sequence(
         &self,
         bus: usize,
@@ -180,6 +184,7 @@ impl<'a> FaultAnalyzer<'a> {
     /// (no Y-bus inversion). For a radial network this gives the
     /// short-circuit impedance at the fault bus as the sum of series
     /// impedances from the source. Fast and robust for planning studies.
+    #[must_use]
     pub fn z1_thevenin_radial(&self, bus: usize) -> f64 {
         // BFS from the slack bus, accumulating series impedance.
         let slack = self
@@ -194,8 +199,8 @@ impl<'a> FaultAnalyzer<'a> {
             return 0.001;
         }
         // Dijkstra: cost = path resistance squared + reactance squared
-        use std::collections::HashMap;
-        let mut dist: HashMap<usize, (f64, f64)> = HashMap::new();
+        let mut dist: std::collections::HashMap<usize, (f64, f64)> =
+            std::collections::HashMap::new();
         dist.insert(slack, (0.0, 0.0));
         let mut queue: std::collections::BinaryHeap<(std::cmp::Reverse<u64>, usize)> =
             std::collections::BinaryHeap::new();
@@ -225,7 +230,11 @@ impl<'a> FaultAnalyzer<'a> {
                 };
                 if better {
                     dist.insert(v, (r_new, x_new));
-                    let mag = ((r_new * r_new + x_new * x_new) * 1e6) as u64;
+                    // Scaled impedance magnitude used purely as a Dijkstra
+                    // priority; non-negative by construction and far below
+                    // u64::MAX, so the conversion cannot truncate or wrap.
+                    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                    let mag = ((r_new * r_new + x_new * x_new) * 1e6_f64) as u64;
                     queue.push((std::cmp::Reverse(mag), v));
                 }
             }
@@ -238,6 +247,7 @@ impl<'a> FaultAnalyzer<'a> {
     /// Uses the radial-network approximation (series-impedance sum) for
     /// `Z₁`. Assumes `Z₂ = Z₁` and `Z₀ = 3·Z₁` (typical for systems with
     /// neutral grounding reactors).
+    #[must_use]
     pub fn calculate_fault_current(&self, bus: usize, fault_type: FaultType) -> FaultResult {
         let z1 = self.z1_thevenin_radial(bus);
         let z2 = z1; // assumption
@@ -311,8 +321,7 @@ impl<'a> FaultAnalyzer<'a> {
             .buses
             .iter()
             .find(|b| b.id == bus)
-            .map(|b| b.base_kv)
-            .unwrap_or(110.0)
+            .map_or(110.0, |b| b.base_kv)
     }
 }
 
@@ -434,7 +443,7 @@ mod tests {
     /// - L-L: |If| = √3 / (Z1 + Z2) = √3 / 0.8 ≈ 2.165 pu
     /// - SLG: |If| = 3.0 / (Z1 + Z2 + Z0) = 3 / 0.9 ≈ 3.333 pu
     /// - DLG: |If| = 3 · |I0| with I0 = I1 · Z2 / (Z2 + Z0) and
-    ///         I1 = 1 / (Z1 + Z2·Z0/(Z2+Z0))
+    ///   I1 = 1 / (Z1 + Z2·Z0/(Z2+Z0))
     ///
     /// (Reference: Glover, Sarma & Overbye, "Power System Analysis and
     /// Design", 5th ed., Example 7.5.)
@@ -447,16 +456,16 @@ mod tests {
         let z0 = 0.1;
         let net = SequenceNetwork { z1, z2, z0 };
 
-        let r3 = a.fault_from_sequence(2, FaultType::ThreePhase, net);
-        assert!((r3.i_fault_pu - 2.5).abs() < 1e-9);
+        let three_phase = a.fault_from_sequence(2, FaultType::ThreePhase, net);
+        assert!((three_phase.i_fault_pu - 2.5).abs() < 1e-9);
 
-        let rll = a.fault_from_sequence(2, FaultType::LineToLine, net);
-        assert!((rll.i_fault_pu - (3.0_f64).sqrt() / (z1 + z2)).abs() < 1e-5);
+        let line_line = a.fault_from_sequence(2, FaultType::LineToLine, net);
+        assert!((line_line.i_fault_pu - (3.0_f64).sqrt() / (z1 + z2)).abs() < 1e-5);
 
-        let rslg = a.fault_from_sequence(2, FaultType::LineToGround, net);
-        assert!((rslg.i_fault_pu - 3.0 / (z1 + z2 + z0)).abs() < 1e-5);
+        let single_ground = a.fault_from_sequence(2, FaultType::LineToGround, net);
+        assert!((single_ground.i_fault_pu - 3.0 / (z1 + z2 + z0)).abs() < 1e-5);
 
-        let rdlg = a.fault_from_sequence(2, FaultType::DoubleLineToGround, net);
+        let double_ground = a.fault_from_sequence(2, FaultType::DoubleLineToGround, net);
         // I0 = -I1 · Z2 / (Z2 + Z0) = -0.5·0.4/0.5 = -0.4
         // Wait, Glover example: Z_eq = Z2·Z0/(Z2+Z0) = 0.4·0.1/0.5 = 0.08
         // I1 = 1/(0.4+0.08) = 2.0833
@@ -468,9 +477,9 @@ mod tests {
         let i0 = -i1 * z2 / (z2 + z0);
         let expected = 3.0 * i0.abs();
         assert!(
-            (rdlg.i_fault_pu - expected).abs() < 1e-9,
+            (double_ground.i_fault_pu - expected).abs() < 1e-9,
             "DLG got {} expected {}",
-            rdlg.i_fault_pu,
+            double_ground.i_fault_pu,
             expected
         );
     }

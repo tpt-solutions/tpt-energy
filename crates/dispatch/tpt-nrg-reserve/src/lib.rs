@@ -7,6 +7,9 @@
 use serde::{Deserialize, Serialize};
 
 /// Reserve adequacy assessment for a system snapshot.
+// The `_mw` suffixes intentionally carry the unit into every field name;
+// the same-postfix pedantic lint does not improve them.
+#[allow(clippy::struct_field_names)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReserveAssessment {
     /// Available spinning reserve in MW (headroom on online units).
@@ -25,12 +28,14 @@ pub struct ReserveAssessment {
 /// already nets out the load being served. Compare it against a requirement
 /// (e.g. [`contingency_reserve_requirement`]) to judge adequacy; see
 /// [`assess_reserves`].
+#[must_use]
 pub fn spinning_reserve_margin(online_capacity_mw: f64, current_output_mw: f64) -> f64 {
     (online_capacity_mw - current_output_mw).max(0.0)
 }
 
 /// Contingency-reserve requirement as a fraction of the largest online
 /// unit, plus a fraction of load (NERC-style: N-1 + 3% of load).
+#[must_use]
 pub fn contingency_reserve_requirement(
     largest_online_unit_mw: f64,
     load_mw: f64,
@@ -41,6 +46,7 @@ pub fn contingency_reserve_requirement(
 
 /// Assess spinning reserve availability against the contingency-reserve
 /// requirement for a system snapshot.
+#[must_use]
 pub fn assess_reserves(
     online_capacity_mw: f64,
     current_output_mw: f64,
@@ -70,7 +76,7 @@ mod tests {
 
     #[test]
     fn spinning_margin_clamped_non_negative() {
-        assert_eq!(spinning_reserve_margin(200.0, 250.0), 0.0);
+        assert!(spinning_reserve_margin(200.0, 250.0).abs() < 1e-12);
     }
 
     #[test]

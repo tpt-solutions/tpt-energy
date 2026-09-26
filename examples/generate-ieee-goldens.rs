@@ -8,6 +8,13 @@ use std::path::PathBuf;
 use tpt_nrg_core::EnergySystem;
 use tpt_nrg_powerflow::{PowerFlowMethod, PowerFlowSolver};
 
+
+/// Round to 9 decimal places so regenerated fixtures are byte-stable
+/// across platforms (libm ulp differences must not fail the drift guard).
+fn round9(x: f64) -> f64 {
+    (x * 1.0e9).round() / 1.0e9
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let here = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let data_root = here.join("..").join("test-data");
@@ -45,7 +52,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
 
         let case_id = case.trim_end_matches(".json");
-        let angles_deg: Vec<f64> = result.bus_voltage_angle_rad.iter().map(|r| r.to_degrees()).collect();
+        let round_all = |xs: &[f64]| xs.iter().map(|&x| round9(x)).collect::<Vec<f64>>();
+        let angles_deg: Vec<f64> = result
+            .bus_voltage_angle_rad
+            .iter()
+            .map(|r| round9(r.to_degrees()))
+            .collect();
 
         let json = serde_json::json!({
             "case": case_id,
@@ -53,9 +65,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "converged": result.converged,
             "iterations": result.iterations,
             "final_mismatch": result.final_mismatch,
-            "total_losses_mw": result.total_losses_mw,
-            "total_losses_mvar": result.total_losses_mvar,
-            "bus_voltage_magnitude_pu": result.bus_voltage_magnitude_pu,
+            "total_losses_mw": round9(result.total_losses_mw),
+            "total_losses_mvar": round9(result.total_losses_mvar),
+            "bus_voltage_magnitude_pu": round_all(&result.bus_voltage_magnitude_pu),
             "bus_voltage_angle_deg": angles_deg,
             "tolerance_pu": 5e-3,
             "tolerance_angle_deg": 1.0,

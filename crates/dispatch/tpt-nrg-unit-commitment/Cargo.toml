@@ -8,6 +8,8 @@ repository.workspace = true
 homepage.workspace = true
 authors.workspace = true
 description = "TPT Energy MILP unit commitment"
+categories = ["science", "algorithms"]
+keywords = ["unit-commitment", "dispatch", "scheduling", "power-systems", "merit-order"]
 
 [lints.rust]
 unsafe_code = "forbid"
@@ -37,3 +39,8 @@ substrate = [
 approx = { workspace = true }
 tpt-nrg-economic-dispatch = { workspace = true }
 serde_json = { workspace = true }
+criterion = "0.5"
+
+[[bench]]
+name = "unit_commitment"
+harness = false

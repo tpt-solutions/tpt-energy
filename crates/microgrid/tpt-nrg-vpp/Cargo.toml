@@ -8,6 +8,8 @@ repository.workspace = true
 homepage.workspace = true
 authors.workspace = true
 description = "TPT Energy virtual power plant aggregation"
+categories = ["science", "simulation"]
+keywords = ["vpp", "virtual-power-plant", "aggregation", "demand-response", "der"]
 
 [lints.rust]
 unsafe_code = "forbid"

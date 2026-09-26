@@ -8,6 +8,8 @@ repository.workspace = true
 homepage.workspace = true
 authors.workspace = true
 description = "TPT Energy economic dispatch and storage arbitrage"
+categories = ["science", "algorithms"]
+keywords = ["economic-dispatch", "dispatch", "merit-order", "arbitrage", "power-systems"]
 
 [lints.rust]
 unsafe_code = "forbid"

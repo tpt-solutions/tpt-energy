@@ -7,6 +7,12 @@
 
 /// Sample `n` standard-normal draws using the upstream
 /// `tpt-math-prob-dist` distribution and return `(mean, variance)`.
+///
+/// # Panics
+///
+/// Panics if the upstream normal-distribution constructor rejects the
+/// standard-normal parameterization; it is validated, so this is
+/// unreachable.
 #[cfg(feature = "substrate")]
 #[must_use]
 pub fn normal_sample_mean_var(n: u64) -> (f64, f64) {
@@ -19,14 +25,15 @@ pub fn normal_sample_mean_var(n: u64) -> (f64, f64) {
 
     let mut sum = 0.0_f64;
     let mut sum_sq = 0.0_f64;
-    let mut count = 0_u64;
+    // A draw count above 2^52 would lose precision in the f64 mean; such a
+    // sample cannot be accumulated in memory anyway.
+    #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+    let n_f = n as f64;
     for _ in 0..n {
         let x: f64 = wrapper.sample(&mut rng);
         sum += x;
         sum_sq += x * x;
-        count += 1;
     }
-    let n_f = count as f64;
     let mean = sum / n_f;
     let var = sum_sq / n_f - mean * mean;
     (mean, var)

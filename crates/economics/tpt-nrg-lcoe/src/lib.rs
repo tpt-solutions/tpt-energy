@@ -30,6 +30,7 @@ pub struct LcoeInputs {
 
 impl LcoeInputs {
     /// Construct a simplified LCOE input for a generic project.
+    #[must_use]
     pub fn new(
         capex_dollar: f64,
         annual_fixed_om_dollar: f64,
@@ -53,20 +54,28 @@ impl LcoeInputs {
     }
 }
 
+/// Convert a year index to `i32` for `powi`, saturating at `i32::MAX`
+/// because no realistic project life or cash-flow series reaches 2^31
+/// entries.
+fn year_index(value: usize) -> i32 {
+    i32::try_from(value).unwrap_or(i32::MAX)
+}
+
 /// Compute the levelized cost of energy in $/MWh.
 ///
 /// `LCOE = (sum_t (CAPEX_t + O&M_t + fuel_t) / (1+r)^t) / (sum_t E_t / (1+r)^t)`
+#[must_use]
 pub fn levelized_cost_of_energy(inputs: &LcoeInputs) -> f64 {
-    let n = inputs.lifetime_years as i32;
+    let n = year_index(inputs.lifetime_years as usize);
     let r = inputs.discount_rate;
     let annuity_factor = if r.abs() < 1e-12 {
-        n as f64
+        f64::from(n)
     } else {
         (1.0 - (1.0 + r).powi(-n)) / r
     };
     // Capital recovery factor: spreads CAPEX over the lifetime, discounted.
     let crf = if r.abs() < 1e-12 {
-        1.0 / n as f64
+        1.0 / f64::from(n)
     } else {
         r * (1.0 + r).powi(n) / ((1.0 + r).powi(n) - 1.0)
     };
@@ -85,11 +94,12 @@ pub fn levelized_cost_of_energy(inputs: &LcoeInputs) -> f64 {
 /// Net present value of a series of cash flows (length n+1) at the given
 /// discount rate. `cash_flows[0]` is the initial investment (typically
 /// negative).
+#[must_use]
 pub fn net_present_value(cash_flows: &[f64], discount_rate: f64) -> f64 {
     cash_flows
         .iter()
         .enumerate()
-        .map(|(t, cf)| cf / (1.0 + discount_rate).powi(t as i32))
+        .map(|(t, cf)| cf / (1.0 + discount_rate).powi(year_index(t)))
         .sum()
 }
 
@@ -97,6 +107,7 @@ pub fn net_present_value(cash_flows: &[f64], discount_rate: f64) -> f64 {
 ///
 /// Uses bisection; returns `None` if it cannot be bracketed in
 /// `[-0.99, 10.0]`.
+#[must_use]
 pub fn internal_rate_of_return(cash_flows: &[f64]) -> Option<f64> {
     let npv = |r: f64| net_present_value(cash_flows, r);
     let mut lo = -0.99_f64;

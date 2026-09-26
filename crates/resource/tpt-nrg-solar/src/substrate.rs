@@ -11,6 +11,11 @@
 /// propagator, given a number of days since J2000.0 TDB.
 ///
 /// Uses the standard Earth heliocentric orbit (a = 1 AU, e ≈ 0.0167).
+///
+/// # Panics
+///
+/// Panics if the upstream `OrbitalElements` constructor rejects the Earth
+/// orbit; the element set is fixed and valid, so this is unreachable.
 #[cfg(feature = "substrate")]
 #[must_use]
 pub fn earth_sun_distance_au(days_since_j2000: f64) -> f64 {

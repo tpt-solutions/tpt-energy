@@ -55,12 +55,17 @@ let plan = storage_arbitrage(
 
 ## `tpt-nrg-reserve`
 
-Spinning reserve margin and contingency (NERC-style N-1) requirement.
+Spinning reserve headroom and contingency (NERC-style N-1) requirement, combined in a `ReserveAssessment`.
 
 ```rust,no_run
-use tpt_nrg_reserve::*;
+use tpt_nrg_reserve::{assess_reserves, contingency_reserve_requirement, spinning_reserve_margin};
 
-let spinning  = spinning_reserve_margin(200.0, 100.0, 80.0);    // MW headroom - load
-let conting   = contingency_reserve_requirement(100.0, 500.0, 0.03); // N-1 + 3% load
-let total     = total_operating_reserve(200.0, 100.0, 100.0, 500.0, 0.03);
+let spinning = spinning_reserve_margin(200.0, 100.0); // MW headroom on online units
+let conting  = contingency_reserve_requirement(100.0, 500.0, 0.03); // N-1 + 3% load
+let assessment = assess_reserves(200.0, 100.0, 100.0, 500.0, 0.03);
+// assessment.spinning_available_mw
+// assessment.contingency_required_mw
+// assessment.margin_mw  (negative = reserve deficit)
 ```
+
+`spinning_reserve_margin` is pure availability headroom (`online − output`, floored at 0) — it does *not* subtract load, because headroom already nets out the load being served.

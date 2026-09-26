@@ -32,7 +32,7 @@ flowchart LR
 
 ## Crate status
 
-See the [Crate Status](../crate-status.md) chapter for the per-crate maturity table (Stable / Alpha / Planned).
+See the [Crate Status](crate-status.md) chapter for the per-crate maturity table (Stable / Alpha / Planned).
 
 ## Where to go next
 

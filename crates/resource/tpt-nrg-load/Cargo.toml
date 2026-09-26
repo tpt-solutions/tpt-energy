@@ -8,6 +8,8 @@ repository.workspace = true
 homepage.workspace = true
 authors.workspace = true
 description = "TPT Energy load forecasting and demand response"
+categories = ["science", "simulation"]
+keywords = ["load-forecasting", "demand-response", "electricity", "energy", "load-profile"]
 
 [lints.rust]
 unsafe_code = "forbid"

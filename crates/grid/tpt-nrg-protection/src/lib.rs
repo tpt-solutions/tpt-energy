@@ -53,7 +53,8 @@ impl RelayCurve {
     /// IEC 60255-151 characteristic `t = k / (i^α − 1)` with
     /// (k, α) = (0.14, 0.02) standard inverse, (13.5, 1) very inverse and
     /// (80, 2) extremely inverse. Returns `INFINITY` at or below pickup.
-    pub fn trip_time(&self, i: f64) -> f64 {
+    #[must_use]
+    pub fn trip_time(self, i: f64) -> f64 {
         if i <= 1.0 {
             return f64::INFINITY;
         }
@@ -68,6 +69,7 @@ impl RelayCurve {
 
 impl Relay {
     /// Compute the operating time (s) for a fault current `i_fault_pu`.
+    #[must_use]
     pub fn operating_time(&self, i_fault_pu: f64) -> f64 {
         let mult = i_fault_pu / self.pickup_pu;
         if mult < 1.0 {
@@ -79,6 +81,7 @@ impl Relay {
 
 /// Coordination check: ensure that `primary` trips before `backup` for all
 /// fault currents. The time margin is typically 0.2-0.4 s.
+#[must_use]
 pub fn check_coordination(primary: &Relay, backup: &Relay, fault_currents_pu: &[f64]) -> bool {
     for &i in fault_currents_pu {
         let t_primary = primary.operating_time(i);

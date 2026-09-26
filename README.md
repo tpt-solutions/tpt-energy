@@ -38,7 +38,7 @@ flowchart LR
 | `tpt-nrg-wind`                    | Wind power & wake losses                     | Stable   |
 | `tpt-nrg-hydro`                   | Hydro power calculation                      | Stable   |
 | `tpt-nrg-load`                    | Load forecasting & demand response           | Stable   |
-| `tpt-nrg-powerflow`               | AC/DC power flow solvers                     | Stable   |
+| `tpt-nrg-powerflow`               | AC/DC power flow solvers (NR with Q limits)  | Stable   |
 | `tpt-nrg-fault`                   | Short-circuit (fault) analysis               | Stable   |
 | `tpt-nrg-state-estimation`        | DC-approx WLS grid state estimator           | Alpha    |
 | `tpt-nrg-protection`              | Relay coordination & protection zones        | Stable   |
@@ -57,6 +57,18 @@ flowchart LR
 
 See [`docs/book/src/crate-status.md`](docs/book/src/crate-status.md) for
 detailed maturity notes per crate.
+
+## Per-crate documentation
+
+Every crate ships its own documentation, in its own directory:
+
+- `crates/**/<crate>/README.md` — what the crate does, installation,
+  a usage example, crates.io categories/keywords, status, and test
+  instructions.
+- `crates/**/<crate>/CHANGELOG.md` — per-crate changes in
+  [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
+- The [mdBook](docs/book/src/SUMMARY.md) walks through the architecture
+  and each crate with tutorials.
 
 ## Quick Start
 
@@ -81,9 +93,14 @@ println!("{:?}", result);
 
 - `examples/ieee-14-bus-powerflow` — solve the IEEE 14-bus case
 - `examples/solar-farm-layout` — solar position + PV output profile
-- `examples/wind-farm-wake` — Jensen wake model
+- `examples/wind-farm-wake` — wake models (Jensen / Frandsen / eddy-viscosity)
 - `examples/microgrid-islanding` — islanding event + battery dispatch
 - `examples/battery-arbitrage` — storage arbitrage from price forecast
+- `examples/energy-cycle` — end-to-end: resource → storage → grid →
+  dispatch → economics
+
+The `examples/` directory is its own cargo workspace; build it with
+`cargo check --manifest-path examples/Cargo.toml --all-targets`.
 
 ## License
 

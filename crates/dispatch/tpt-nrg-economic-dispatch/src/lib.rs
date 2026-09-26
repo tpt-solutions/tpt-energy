@@ -36,11 +36,18 @@ pub struct ArbitragePlan {
 
 /// Solve a lossless economic dispatch using lambda iteration.
 ///
-/// Marginal costs are taken from each generator's [`CostCurve`]. The
+/// Marginal costs are taken from each generator's [`CostCurve`](tpt_nrg_core::CostCurve). The
 /// algorithm finds the system marginal price `λ` such that
 /// `sum_i P_i(λ) = system_load_mw` with each unit's output clamped to
 /// `[p_min, p_max]`. Units without a cost curve are dispatched at
 /// `p_min` and are not marginal.
+///
+/// # Errors
+///
+/// Returns [`DispatchError::NoGenerators`] for an empty system,
+/// [`DispatchError::InsufficientCapacity`] when the load exceeds total
+/// dispatchable capacity, and [`DispatchError::LoadBelowMinimum`] when the
+/// load is below the must-run minimum generation.
 pub fn economic_dispatch(
     system: &EnergySystem,
     system_load_mw: f64,
@@ -129,6 +136,7 @@ pub fn economic_dispatch(
 
 /// Storage arbitrage from a price forecast: charge at low prices, discharge
 /// at high prices, respecting energy and power limits.
+#[must_use]
 pub fn storage_arbitrage(
     prices_dollar_per_mwh: &[f64],
     duration_h: f64,
@@ -149,13 +157,12 @@ pub fn storage_arbitrage(
         return plan;
     }
     let mut sorted = prices_dollar_per_mwh.to_vec();
-    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    sorted.sort_by(f64::total_cmp);
     let low_threshold = sorted[n / 3];
     let high_threshold = sorted[2 * n / 3];
     let eta = round_trip_efficiency.sqrt();
     let mut soc = 0.5 * energy_capacity_mwh;
-    for i in 0..n {
-        let p = prices_dollar_per_mwh[i];
+    for (i, &p) in prices_dollar_per_mwh.iter().enumerate() {
         if p <= low_threshold && soc < energy_capacity_mwh {
             let charge = (power_rating_mw).min((energy_capacity_mwh - soc) / (duration_h * eta));
             plan.charge_mw[i] = charge;
@@ -194,7 +201,7 @@ pub enum DispatchError {
     LoadBelowMinimum {
         /// Requested system load in MW.
         load_mw: f64,
-        /// Sum of must-run p_min in MW.
+        /// Sum of must-run `p_min` in MW.
         min_generation_mw: f64,
     },
 }
@@ -267,7 +274,7 @@ mod tests {
             matches!(
                 r,
                 Err(DispatchError::InsufficientCapacity { load_mw, capacity_mw })
-                    if load_mw == 500.0 && (capacity_mw - 450.0).abs() < 1e-9
+                    if (load_mw - 500.0).abs() < 1e-9 && (capacity_mw - 450.0).abs() < 1e-9
             ),
             "expected InsufficientCapacity, got {r:?}"
         );

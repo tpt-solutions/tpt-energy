@@ -109,6 +109,11 @@ impl PowerFlowSolver {
     }
 
     /// Solve the power flow for the given system.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PowerFlowError`] when the system fails validation or the
+    /// chosen method fails to converge within the configured limits.
     pub fn solve(&self, system: &EnergySystem) -> Result<PowerFlowResult, PowerFlowError> {
         match self.method {
             PowerFlowMethod::NewtonRaphson => crate::newton_raphson::solve(system, self.options),

@@ -8,6 +8,8 @@ repository.workspace = true
 homepage.workspace = true
 authors.workspace = true
 description = "TPT Energy LCOE / NPV / IRR"
+categories = ["finance", "science"]
+keywords = ["lcoe", "npv", "irr", "energy-economics", "project-finance"]
 
 [lints.rust]
 unsafe_code = "forbid"

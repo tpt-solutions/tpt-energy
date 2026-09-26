@@ -116,6 +116,19 @@ fn main() -> Result<(), Box<dyn Error>> {
     // ----------------------------------------------------------------
     // 4. Dispatch: 5-generator economic dispatch
     // ----------------------------------------------------------------
+    // The IEEE case data carries no cost model (power flow does not need
+    // one), so attach linear cost curves before dispatching: units without
+    // a curve are treated as must-run at p_min by the dispatcher.
+    for (i, gen) in system.generators.iter_mut().enumerate() {
+        let mc = 12.0 + 6.0 * i as f64; // $/MWh, merit order: slack cheapest
+        let cost = |p: f64| mc * p;
+        gen.cost_curve = Some(tpt_nrg_core::CostCurve::piecewise(
+            gen.p_min_mw,
+            gen.p_max_mw,
+            cost(gen.p_min_mw),
+            cost(gen.p_max_mw),
+        ));
+    }
     let dispatch = economic_dispatch(&system, 250.0)?;
     println!("\nStep 4: Economic dispatch (250 MW load)");
     println!(

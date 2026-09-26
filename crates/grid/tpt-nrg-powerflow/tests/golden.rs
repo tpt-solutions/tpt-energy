@@ -142,12 +142,9 @@ fn ieee30_matches_golden() {
     }
 }
 
-/// IEEE 57-bus smoke test. The AC NR solver currently does not converge
-/// from a flat start on this case (a known issue with the standard test
-/// data — see todo.md Phase 2 milestone notes), so this test verifies
-/// topology/dimensions and a DC-angle parity check.
+/// IEEE 57-bus topology sanity: dimensions and bus-type census.
 #[test]
-fn ieee57_topology_loads_and_dc_parity() {
+fn ieee57_topology_loads() {
     let system = EnergySystem::from_json_file(
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("..")
@@ -172,31 +169,15 @@ fn ieee57_topology_loads_and_dc_parity() {
         .filter(|b| matches!(b.bus_type, tpt_nrg_core::BusType::Pv))
         .count();
     assert_eq!(pvs, 6, "IEEE 57 has 6 PV buses");
-
-    // DC power flow must converge trivially.
-    let dc = PowerFlowSolver::new(PowerFlowMethod::DcPowerFlow)
-        .solve(&system)
-        .expect("DC solve");
-    assert!(dc.converged);
-    let slack_p = dc.generator_p_mw[0];
-    // Total load ≈ 1250.8 MW, total scheduled gen = 928.9 MW → slack ≈ 322 MW.
-    assert!(
-        slack_p > 250.0 && slack_p < 500.0,
-        "DC slack P {slack_p} out of expected band"
-    );
 }
 
-/// IEEE 57-bus AC solve. The current solver (damped Newton–Raphson with
-/// per-iteration step-size limits) reduces the residual to a few MW p.u.
-/// but cannot reach the <1% error milestone without Q-limit handling
-/// — tracked for a future release (see todo.md Phase 2 milestone notes).
-///
-/// This test verifies that the solver reaches a finite residual at the
-/// loose engineering tolerance (15 MW p.u. = 15% of system load on a
-/// 100 MVA base). The voltages must remain in a physically reasonable
-/// band (0.85–1.15 pu) regardless.
+/// Phase 2 milestone: IEEE 57-bus AC power flow converges under
+/// Newton–Raphson with Q-limit enforcement, matches the golden (AC) values,
+/// and reproduces the published MATPOWER case57 solution anchors to well
+/// within 1%: total losses ≈ 27.86 MW, slack dispatch ≈ 478.66 MW, and
+/// slack reactive output ≈ 128.85 `MVAr`.
 #[test]
-fn ieee57_ac_warm_start_within_tolerance() {
+fn ieee57_ac_matches_golden_and_published() {
     let system = EnergySystem::from_json_file(
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("..")
@@ -210,14 +191,57 @@ fn ieee57_ac_warm_start_within_tolerance() {
 
     let solver = PowerFlowSolver::new(PowerFlowMethod::NewtonRaphson)
         .with_max_iterations(200)
-        .with_tolerance(15.0); // accept 1500 MW p.u. — engineering limit only
-    let r = solver.solve(&system).expect("ieee57 solve");
-    assert!(r.converged, "ieee57 AC should converge to loose tolerance");
-    // Voltage magnitudes should be in a sensible band (0.85-1.15 pu).
-    for (i, vmag) in r.bus_voltage_magnitude_pu.iter().enumerate() {
+        .with_tolerance(1e-8);
+    let r = solver.solve(&system).expect("ieee57 AC solve");
+    assert!(
+        r.converged,
+        "ieee57 AC must converge (mismatch {:.3e})",
+        r.final_mismatch
+    );
+
+    // Compare against the AC golden fixture (regenerated together with the
+    // solver by `generate-ieee-goldens`).
+    let golden_raw = std::fs::read_to_string(golden_path().join("ieee-57-bus.json"))
+        .expect("read golden ieee-57");
+    let golden: Golden = serde_json::from_str(&golden_raw).expect("parse golden");
+    let deg_tol = if golden.tolerance_angle_deg > 0.0 {
+        golden.tolerance_angle_deg
+    } else {
+        1.0
+    };
+    for (i, (&got, &want)) in r
+        .bus_voltage_magnitude_pu
+        .iter()
+        .zip(golden.bus_voltage_magnitude_pu.iter())
+        .enumerate()
+    {
         assert!(
-            *vmag > 0.85 && *vmag < 1.15,
-            "bus {i}: |V|={vmag} out of band"
+            (got - want).abs() < 1e-6,
+            "bus {i} V: got {got}, want {want}"
         );
     }
+    for (i, (&got, &want)) in r
+        .bus_voltage_angle_rad
+        .iter()
+        .zip(golden.bus_voltage_angle_deg.iter())
+        .enumerate()
+    {
+        let got_deg = got.to_degrees();
+        assert!(
+            (got_deg - want).abs() < deg_tol,
+            "bus {i} angle: got {got_deg}, want {want}, tol {deg_tol}"
+        );
+    }
+
+    // Published anchors (MATPOWER case57 reference solution).
+    let anchor = |got: f64, published: f64, what: &str| {
+        let err = ((got - published) / published).abs();
+        assert!(
+            err < 0.01,
+            "{what}: got {got:.3}, published {published:.3} (rel err {err:.3e} > 1%)"
+        );
+    };
+    anchor(r.total_losses_mw, 27.86, "total losses");
+    anchor(r.generator_p_mw[0], 478.66, "slack P");
+    anchor(r.generator_q_mvar[0], 128.85, "slack Q");
 }

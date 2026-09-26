@@ -53,13 +53,16 @@ pub enum DerAsset {
 impl DerAsset {
     /// Net power contribution of the asset (MW, positive = supply, negative
     /// = demand).
+    #[must_use]
     pub fn net_power_mw(&self) -> f64 {
         match self {
+            // Weather-dependent renewables share the same capacity-fraction
+            // model.
             DerAsset::Solar {
                 capacity_mw,
                 output_fraction,
-            } => capacity_mw * output_fraction,
-            DerAsset::Wind {
+            }
+            | DerAsset::Wind {
                 capacity_mw,
                 output_fraction,
             } => capacity_mw * output_fraction,
@@ -116,6 +119,7 @@ pub struct MicrogridController {
 
 impl MicrogridController {
     /// Construct a new controller.
+    #[must_use]
     pub fn new(control_strategy: ControlStrategy, total_load_mw: f64) -> Self {
         Self {
             grid_connected: true,
@@ -131,11 +135,13 @@ impl MicrogridController {
     }
 
     /// Total generation (MW) from the assets.
+    #[must_use]
     pub fn total_generation_mw(&self) -> f64 {
         self.assets.iter().map(|a| a.net_power_mw().max(0.0)).sum()
     }
 
     /// Total load including DER loads.
+    #[must_use]
     pub fn total_demand_mw(&self) -> f64 {
         let der_loads: f64 = self
             .assets
@@ -147,6 +153,7 @@ impl MicrogridController {
 
     /// Net balance (generation - demand). Positive = surplus, negative =
     /// deficit.
+    #[must_use]
     pub fn net_balance_mw(&self) -> f64 {
         self.total_generation_mw() - self.total_demand_mw()
     }

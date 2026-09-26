@@ -8,6 +8,8 @@ repository.workspace = true
 homepage.workspace = true
 authors.workspace = true
 description = "TPT Energy core data model: EnergySystem, Bus, Branch, Generator"
+categories = ["science", "simulation"]
+keywords = ["power-systems", "energy", "data-model", "ieee", "grid"]
 
 [lints.rust]
 unsafe_code = "forbid"

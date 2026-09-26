@@ -37,6 +37,7 @@ pub struct VirtualPowerPlant {
 impl VirtualPowerPlant {
     /// Construct a new VPP from a list of per-asset (capacity, current
     /// output, up-flex, down-flex).
+    #[must_use]
     pub fn new(assets: Vec<(f64, f64, f64, f64)>, aggregation_model: AggregationModel) -> Self {
         let mut caps = Vec::new();
         let mut outs = Vec::new();
@@ -58,21 +59,25 @@ impl VirtualPowerPlant {
     }
 
     /// Total nameplate capacity (MW).
+    #[must_use]
     pub fn total_capacity_mw(&self) -> f64 {
         self.asset_capacities_mw.iter().sum()
     }
 
     /// Total current output (MW).
+    #[must_use]
     pub fn total_output_mw(&self) -> f64 {
         self.apply_aggregation(self.asset_outputs_mw.iter().sum())
     }
 
     /// Total upward flexible capacity (MW).
+    #[must_use]
     pub fn flexible_capacity_up_mw(&self) -> f64 {
         self.apply_aggregation(self.asset_up_flex_mw.iter().sum())
     }
 
     /// Total downward flexible capacity (MW).
+    #[must_use]
     pub fn flexible_capacity_down_mw(&self) -> f64 {
         self.apply_aggregation(self.asset_down_flex_mw.iter().sum())
     }
@@ -80,6 +85,7 @@ impl VirtualPowerPlant {
     /// Pro-rata dispatch: increase each asset's output by `delta_mw`,
     /// respecting each asset's upward flexibility. Returns the dispatch
     /// plan and the unfulfilled portion.
+    #[must_use]
     pub fn dispatch_assets(&self, delta_mw: f64) -> DispatchPlan {
         let total_up = self.asset_up_flex_mw.iter().sum::<f64>();
         if total_up <= 0.0 {
@@ -108,6 +114,9 @@ impl VirtualPowerPlant {
 }
 
 /// Result of a dispatch request.
+// The `_mw` suffixes intentionally carry the unit into every field name;
+// the same-postfix pedantic lint does not improve them.
+#[allow(clippy::struct_field_names)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DispatchPlan {
     /// Per-asset delta in MW (positive = increase output, negative =

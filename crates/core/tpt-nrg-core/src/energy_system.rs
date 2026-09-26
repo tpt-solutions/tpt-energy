@@ -75,22 +75,40 @@ impl EnergySystem {
     }
 
     /// Deserialize an `EnergySystem` from a JSON string.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CoreError::Json`] if `s` is not a valid JSON document for
+    /// this type.
     pub fn from_json(s: &str) -> CoreResult<Self> {
         Ok(serde_json::from_str(s)?)
     }
 
     /// Deserialize an `EnergySystem` from a JSON file.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CoreError::Io`] if the file cannot be read and
+    /// [`CoreError::Json`] if its contents fail to deserialize.
     pub fn from_json_file(path: impl AsRef<std::path::Path>) -> CoreResult<Self> {
         let s = std::fs::read_to_string(path)?;
         Self::from_json(&s)
     }
 
     /// Serialize to a pretty-printed JSON string.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CoreError::Json`] if serialization fails.
     pub fn to_json_pretty(&self) -> CoreResult<String> {
         Ok(serde_json::to_string_pretty(self)?)
     }
 
-    /// Add a bus. Returns an error if a bus with the same id already exists.
+    /// Add a bus.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if a bus with the same id already exists.
     pub fn add_bus(&mut self, bus: Bus) -> CoreResult<()> {
         if self.bus_index(bus.id).is_some() {
             return Err(CoreError::DuplicateId(bus.id, "bus"));
@@ -99,7 +117,12 @@ impl EnergySystem {
         Ok(())
     }
 
-    /// Add a branch. Returns an error if either referenced bus is missing.
+    /// Add a branch.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if either referenced bus is missing or a branch with
+    /// the same id already exists.
     pub fn add_branch(&mut self, branch: Branch) -> CoreResult<()> {
         if self.bus_index(branch.from_bus).is_none() {
             return Err(CoreError::UnknownBusForBranch {
@@ -120,7 +143,12 @@ impl EnergySystem {
         Ok(())
     }
 
-    /// Add a generator. Returns an error if the referenced bus is missing.
+    /// Add a generator.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the referenced bus is missing or a generator with
+    /// the same id already exists.
     pub fn add_generator(&mut self, gen: Generator) -> CoreResult<()> {
         if self.bus_index(gen.bus_id).is_none() {
             return Err(CoreError::UnknownBusForGenerator {
@@ -135,7 +163,12 @@ impl EnergySystem {
         Ok(())
     }
 
-    /// Add a load. Returns an error if the referenced bus is missing.
+    /// Add a load.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the referenced bus is missing or a load with the
+    /// same id already exists.
     pub fn add_load(&mut self, load: Load) -> CoreResult<()> {
         if self.bus_index(load.bus_id).is_none() {
             return Err(CoreError::UnknownBusForLoad {
@@ -150,7 +183,12 @@ impl EnergySystem {
         Ok(())
     }
 
-    /// Add a storage unit. Returns an error if the referenced bus is missing.
+    /// Add a storage unit.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the referenced bus is missing or a storage unit
+    /// with the same id already exists.
     pub fn add_storage(&mut self, storage: Storage) -> CoreResult<()> {
         if self.bus_index(storage.bus_id).is_none() {
             return Err(CoreError::UnknownBusForStorage {
@@ -166,6 +204,10 @@ impl EnergySystem {
     }
 
     /// Look up a bus by id.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CoreError::BusNotFound`] if no bus with that id exists.
     pub fn bus(&self, id: usize) -> CoreResult<&Bus> {
         self.buses
             .iter()
@@ -174,6 +216,10 @@ impl EnergySystem {
     }
 
     /// Look up a mutable bus by id.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CoreError::BusNotFound`] if no bus with that id exists.
     pub fn bus_mut(&mut self, id: usize) -> CoreResult<&mut Bus> {
         self.buses
             .iter_mut()
@@ -193,7 +239,7 @@ impl EnergySystem {
                 .sum::<f64>()
     }
 
-    /// Total system reactive load in MVAr.
+    /// Total system reactive load in `MVAr`.
     #[must_use]
     pub fn total_load_mvar(&self) -> f64 {
         self.buses.iter().map(|b| b.load_mvar).sum::<f64>()
@@ -224,8 +270,13 @@ impl EnergySystem {
             .count()
     }
 
-    /// Validate the system: returns `Ok(())` if there is exactly one slack bus
-    /// and all references resolve.
+    /// Validate the system.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error unless there is exactly one slack bus and every
+    /// branch, generator, load, and storage reference resolves to an
+    /// existing bus.
     pub fn validate(&self) -> CoreResult<()> {
         // Branches
         for br in &self.branches {

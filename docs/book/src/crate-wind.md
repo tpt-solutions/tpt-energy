@@ -32,8 +32,10 @@ Verified to integrate to 1.0 over `[0, ∞)` to within 1e-3.
 | Model | Use |
 |-------|-----|
 | `JensenPark` | Top-hat wake, linear expansion. Fast; industry default. |
-| `Frandsen` | Gaussian profile; better for closely-spaced turbines. |
-| `EddyViscosity` | Physics-based; more expensive. |
+| `Frandsen` | Rotor-equivalent wake source, two-zone deficit, partial-rotor overlap. Better for closely-spaced turbines. |
+| `EddyViscosity` | Simple explicit eddy-viscosity diffusion march; smooth wake profile, more expensive. |
+
+All three share the same geometry convention and kinematic (multiplicative) deficit superposition; each has a golden fixture under `test-data/golden/wind/`.
 
 ```rust,no_run
 use tpt_nrg_wind::{WakeModel, WindFarm, WindTurbine};

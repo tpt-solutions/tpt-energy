@@ -67,12 +67,14 @@ impl Storage {
     }
 
     /// Set the initial state of charge.
+    #[must_use]
     pub fn with_initial_soc(mut self, soc: f64) -> Self {
         self.initial_soc = soc.clamp(0.0, 1.0);
         self
     }
 
     /// Set the round-trip efficiency.
+    #[must_use]
     pub fn with_round_trip_efficiency(mut self, eff: f64) -> Self {
         self.round_trip_efficiency = eff.clamp(0.0, 1.0);
         self

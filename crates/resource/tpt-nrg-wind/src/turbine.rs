@@ -23,6 +23,7 @@ fn default_alpha() -> f64 {
 
 impl WindModel {
     /// Construct a wind model with log profile.
+    #[must_use]
     pub fn new(hub_height_m: f64, roughness_length_m: f64, measurement_height_m: f64) -> Self {
         Self {
             hub_height_m,
@@ -33,6 +34,7 @@ impl WindModel {
     }
 
     /// Construct a wind model with power-law profile.
+    #[must_use]
     pub fn with_power_law(hub_height_m: f64, alpha: f64, measurement_height_m: f64) -> Self {
         Self {
             hub_height_m,
@@ -45,6 +47,7 @@ impl WindModel {
     /// Compute the wind speed at the hub height given a reference wind speed
     /// at the measurement height. Uses the log profile if `roughness_length_m`
     /// > 0, otherwise the power-law profile.
+    #[must_use]
     pub fn wind_speed_at_height(&self, v_ref: f64) -> f64 {
         if self.roughness_length_m > 0.0 {
             v_ref * (self.hub_height_m / self.roughness_length_m).ln()
@@ -55,6 +58,10 @@ impl WindModel {
     }
 
     /// Weibull PDF `f(v; k, c) = (k/c) (v/c)^{k-1} exp(-(v/c)^k)`.
+    ///
+    /// A method on [`WindModel`] for call-site ergonomics; the distribution
+    /// itself does not depend on the model's parameters.
+    #[allow(clippy::unused_self)]
     #[must_use]
     pub fn weibull_probability(&self, v: f64, shape_k: f64, scale_c: f64) -> f64 {
         if v <= 0.0 {
@@ -130,18 +137,21 @@ impl WindTurbine {
     }
 
     /// Add a power-curve sample point.
+    #[must_use]
     pub fn with_curve_point(mut self, wind_speed_mps: f64, power_mw: f64) -> Self {
         self.power_curve.push((wind_speed_mps, power_mw));
         self
     }
 
     /// Override the thrust coefficient used by wake models.
+    #[must_use]
     pub fn with_thrust_coefficient(mut self, ct: f64) -> Self {
         self.thrust_coefficient = ct;
         self
     }
 
     /// Output power (MW) at the given wind speed.
+    #[must_use]
     pub fn power_at(&self, v: f64) -> f64 {
         if v < self.cut_in_mps || v > self.cut_out_mps {
             return 0.0;
@@ -158,6 +168,7 @@ impl WindTurbine {
     }
 
     /// Rotor swept area in m².
+    #[must_use]
     pub fn swept_area_m2(&self) -> f64 {
         std::f64::consts::PI * (self.rotor_diameter_m * 0.5).powi(2)
     }
@@ -197,13 +208,24 @@ fn gauss_legendre(n: usize, a: f64, b: f64) -> (Vec<f64>, Vec<f64>) {
     (xs, ws)
 }
 
+/// Convert a loop index or node count to `f64` for quadrature arithmetic.
+///
+/// Exact for magnitudes up to 2^52, far beyond any realistic node count;
+/// the precision-loss allowance lives at this single documented point.
+#[must_use]
+#[allow(clippy::cast_precision_loss)]
+fn count_to_f64(value: usize) -> f64 {
+    value as f64
+}
+
 fn gauss_legendre_std(n: usize) -> (Vec<f64>, Vec<f64>) {
     // Pre-computed for n up to ~200 (use Newton iteration; not the focus of
     // the crate — for production we would table these).
     let mut x = vec![0.0_f64; n];
     let mut w = vec![0.0_f64; n];
     for i in 0..n {
-        let mut z = ((std::f64::consts::PI * (i as f64 + 0.75)) / (n as f64 + 0.5)).cos();
+        let mut z =
+            ((std::f64::consts::PI * (count_to_f64(i) + 0.75)) / (count_to_f64(n) + 0.5)).cos();
         for _ in 0..100 {
             let (p, dp) = legendre(n, z);
             let dz = p / dp;
@@ -225,12 +247,12 @@ fn legendre(n: usize, x: f64) -> (f64, f64) {
     let mut p0 = 1.0;
     let mut p1 = x;
     for k in 1..n {
-        let kf = k as f64;
+        let kf = count_to_f64(k);
         let p2 = ((2.0 * kf + 1.0) * x * p1 - kf * p0) / (kf + 1.0);
         p0 = p1;
         p1 = p2;
     }
-    let dpn = (n as f64) * (x * p1 - p0) / (x * x - 1.0);
+    let dpn = count_to_f64(n) * (x * p1 - p0) / (x * x - 1.0);
     (p1, dpn)
 }
 
@@ -245,8 +267,8 @@ mod tests {
     #[test]
     fn power_at_zero_below_cut_in() {
         let t = generic_turbine();
-        assert_eq!(t.power_at(0.0), 0.0);
-        assert_eq!(t.power_at(2.5), 0.0);
+        assert!(t.power_at(0.0).abs() < 1e-12);
+        assert!(t.power_at(2.5).abs() < 1e-12);
     }
 
     #[test]
@@ -280,10 +302,10 @@ mod tests {
         let m = WindModel::new(80.0, 0.03, 10.0);
         let n = 2000;
         let upper = 40.0;
-        let dv = upper / n as f64;
+        let dv = upper / f64::from(n);
         let mut total = 0.0;
         for i in 0..=n {
-            let v = i as f64 * dv;
+            let v = f64::from(i) * dv;
             let f = if i == 0 || i == n { 0.5 } else { 1.0 };
             total += f * m.weibull_probability(v, 2.0, 8.0);
         }

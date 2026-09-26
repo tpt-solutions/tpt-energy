@@ -43,11 +43,11 @@ mod tests {
         // 64 samples of a sine at near-Nyquist frequency.
         let n = 64;
         let signal: Vec<f64> = (0..n)
-            .map(|i| (std::f64::consts::PI * i as f64 * 0.49).sin())
+            .map(|i| (std::f64::consts::PI * f64::from(i) * 0.49).sin())
             .collect();
         let smoothed = smooth_voltage_measurements(&signal, 15, 0.1);
         // Interior RMS of smoothed should be much smaller than original.
-        let orig_rms: f64 = (signal.iter().map(|x| x * x).sum::<f64>() / n as f64).sqrt();
+        let orig_rms: f64 = (signal.iter().map(|x| x * x).sum::<f64>() / f64::from(n)).sqrt();
         let sm_rms: f64 =
             (smoothed.iter().skip(8).take(48).map(|x| x * x).sum::<f64>() / 48.0).sqrt();
         assert!(sm_rms < 0.3 * orig_rms, "sm {sm_rms} vs orig {orig_rms}");

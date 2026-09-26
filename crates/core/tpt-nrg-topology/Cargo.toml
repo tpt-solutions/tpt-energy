@@ -8,6 +8,8 @@ repository.workspace = true
 homepage.workspace = true
 authors.workspace = true
 description = "TPT Energy network topology: graph, Y-bus, islands, shortest path"
+categories = ["science", "algorithms"]
+keywords = ["power-systems", "graph", "ybus", "network", "topology"]
 
 [lints.rust]
 unsafe_code = "forbid"

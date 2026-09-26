@@ -8,6 +8,8 @@ repository.workspace = true
 homepage.workspace = true
 authors.workspace = true
 description = "TPT Energy solar position (SPA-equivalent) and PV output"
+categories = ["science", "simulation"]
+keywords = ["solar", "photovoltaic", "irradiance", "solar-position", "pv"]
 
 [lints.rust]
 unsafe_code = "forbid"
@@ -32,3 +34,8 @@ substrate = ["dep:tpt-sci-astro"]
 approx = { workspace = true }
 serde_json = { workspace = true }
 chrono = { workspace = true }
+criterion = "0.5"
+
+[[bench]]
+name = "solar_spa"
+harness = false
