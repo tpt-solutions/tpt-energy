@@ -1,0 +1,287 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>tpt-nrg-unit-commitment / tpt-nrg-economic-dispatch / tpt-nrg-reserve - TPT Energy</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="introduction.html">TPT Energy</a></li><li class="chapter-item expanded affix "><li class="part-title">Introduction</li><li class="chapter-item expanded "><a href="introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="quick-start.html"><strong aria-hidden="true">2.</strong> Quick Start</a></li><li class="chapter-item expanded "><a href="cli-quickstart.html"><strong aria-hidden="true">3.</strong> Five-minute quickstart (CLI only)</a></li><li class="chapter-item expanded "><a href="project-template.html"><strong aria-hidden="true">4.</strong> New project template</a></li><li class="chapter-item expanded "><a href="architecture.html"><strong aria-hidden="true">5.</strong> Architecture</a></li><li class="chapter-item expanded "><a href="crate-status.html"><strong aria-hidden="true">6.</strong> Crate Status</a></li><li class="chapter-item expanded "><a href="golden-cases.html"><strong aria-hidden="true">7.</strong> Golden-case gallery</a></li><li class="chapter-item expanded affix "><li class="part-title">Tutorials</li><li class="chapter-item expanded "><a href="tutorial-powerflow.html"><strong aria-hidden="true">8.</strong> Tutorial: 14-bus Power Flow</a></li><li class="chapter-item expanded "><a href="tutorial-microgrid.html"><strong aria-hidden="true">9.</strong> Tutorial: Solar + Battery Microgrid</a></li><li class="chapter-item expanded "><a href="worked-example-contingency.html"><strong aria-hidden="true">10.</strong> Worked Example: Contingency Analysis</a></li><li class="chapter-item expanded "><a href="worked-example-battery-sizing.html"><strong aria-hidden="true">11.</strong> Worked Example: Battery Sizing</a></li><li class="chapter-item expanded affix "><li class="part-title">Core Crates</li><li class="chapter-item expanded "><a href="crate-core.html"><strong aria-hidden="true">12.</strong> tpt-nrg-core</a></li><li class="chapter-item expanded "><a href="crate-topology.html"><strong aria-hidden="true">13.</strong> tpt-nrg-topology</a></li><li class="chapter-item expanded "><a href="crate-timeseries.html"><strong aria-hidden="true">14.</strong> tpt-nrg-timeseries</a></li><li class="chapter-item expanded affix "><li class="part-title">Resource Crates</li><li class="chapter-item expanded "><a href="crate-solar.html"><strong aria-hidden="true">15.</strong> tpt-nrg-solar</a></li><li class="chapter-item expanded "><a href="crate-wind.html"><strong aria-hidden="true">16.</strong> tpt-nrg-wind</a></li><li class="chapter-item expanded "><a href="crate-resource-others.html"><strong aria-hidden="true">17.</strong> tpt-nrg-hydro / tpt-nrg-load / tpt-nrg-thermal-storage</a></li><li class="chapter-item expanded affix "><li class="part-title">Grid Crates</li><li class="chapter-item expanded "><a href="crate-powerflow.html"><strong aria-hidden="true">18.</strong> tpt-nrg-powerflow</a></li><li class="chapter-item expanded "><a href="crate-fault.html"><strong aria-hidden="true">19.</strong> tpt-nrg-fault</a></li><li class="chapter-item expanded affix "><li class="part-title">Storage & Microgrid</li><li class="chapter-item expanded "><a href="crate-storage.html"><strong aria-hidden="true">20.</strong> tpt-nrg-battery / tpt-nrg-hydrogen</a></li><li class="chapter-item expanded "><a href="crate-microgrid.html"><strong aria-hidden="true">21.</strong> tpt-nrg-der / tpt-nrg-islanding / tpt-nrg-vpp</a></li><li class="chapter-item expanded affix "><li class="part-title">Dispatch & Economics</li><li class="chapter-item expanded "><a href="crate-dispatch.html" class="active"><strong aria-hidden="true">22.</strong> tpt-nrg-unit-commitment / tpt-nrg-economic-dispatch / tpt-nrg-reserve</a></li><li class="chapter-item expanded "><a href="crate-economics.html"><strong aria-hidden="true">23.</strong> tpt-nrg-lcoe / tpt-nrg-market / tpt-nrg-carbon</a></li><li class="chapter-item expanded affix "><li class="part-title">Interop & Distribution</li><li class="chapter-item expanded "><a href="crate-interop.html"><strong aria-hidden="true">24.</strong> tpt-nrg-interop</a></li><li class="chapter-item expanded "><a href="crate-viz.html"><strong aria-hidden="true">25.</strong> tpt-nrg-viz</a></li><li class="chapter-item expanded "><a href="crate-cli.html"><strong aria-hidden="true">26.</strong> tpt-nrg-cli</a></li><li class="chapter-item expanded "><a href="https://github.com/tpt-solutions/tpt-energy/tree/master/crates/bindings/tpt-nrg-python.html"><strong aria-hidden="true">27.</strong> tpt-nrg-python</a></li><li class="chapter-item expanded affix "><li class="part-title">Advanced</li><li class="chapter-item expanded "><a href="crate-advanced.html"><strong aria-hidden="true">28.</strong> tpt-nrg-state-estimation / tpt-nrg-protection / tpt-nrg-wasm</a></li><li class="chapter-item expanded "><a href="wasm-build.html"><strong aria-hidden="true">29.</strong> Building for the browser</a></li><li class="chapter-item expanded "><a href="playground.html"><strong aria-hidden="true">30.</strong> Browser playground</a></li><li class="chapter-item expanded affix "><li class="part-title">Reference</li><li class="chapter-item expanded "><a href="https://github.com/tpt-solutions/tpt-energy/tree/master/rfcs.html"><strong aria-hidden="true">31.</strong> RFCs</a></li><li class="chapter-item expanded "><a href="reference/license-audit.html"><strong aria-hidden="true">32.</strong> License audit</a></li><li class="chapter-item expanded "><a href="reference/iec-standards.html"><strong aria-hidden="true">33.</strong> IEC 61850 / 61970 standards review</a></li><li class="chapter-item expanded "><a href="reference/nerc-standards.html"><strong aria-hidden="true">34.</strong> NERC standards review</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">TPT Energy</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="tpt-nrg-unit-commitment--tpt-nrg-economic-dispatch--tpt-nrg-reserve"><a class="header" href="#tpt-nrg-unit-commitment--tpt-nrg-economic-dispatch--tpt-nrg-reserve"><code>tpt-nrg-unit-commitment</code> · <code>tpt-nrg-economic-dispatch</code> · <code>tpt-nrg-reserve</code></a></h1>
+<p>Dispatch and reserve crates.</p>
+<h2 id="tpt-nrg-unit-commitment"><a class="header" href="#tpt-nrg-unit-commitment"><code>tpt-nrg-unit-commitment</code></a></h2>
+<p>Decide which thermal units to start up over a horizon to meet load at minimum cost.</p>
+<p>The default implementation is a <strong>priority-list / forward-dispatch</strong> heuristic — units are sorted by average full-load cost and committed in merit order. This is fast, deterministic, and a recognised industry-grade approximation for planning studies.</p>
+<pre><pre class="playground"><code class="language-rust no_run"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use tpt_nrg_core::EnergySystem;
+use tpt_nrg_unit_commitment::unit_commitment;
+
+let system = EnergySystem::from_json(/* ... */)?;
+let load_mw = vec![50.0, 75.0, 100.0, 125.0];
+let r = unit_commitment(&amp;system, &amp;load_mw);
+// r.commitment[u][t] == 1 if unit u is on at interval t
+// r.outputs[u][t] in MW
+// r.total_cost_dollar
+<span class="boring">}</span></code></pre></pre>
+<p>Full <strong>MILP</strong> (min-up/down times, startup/shutdown costs, ramp constraints) is exposed via the <code>substrate</code> feature using <code>tpt-math-optimize-general</code>.</p>
+<h2 id="tpt-nrg-economic-dispatch"><a class="header" href="#tpt-nrg-economic-dispatch"><code>tpt-nrg-economic-dispatch</code></a></h2>
+<p>Lossless merit-order dispatch with λ-iteration marginal pricing.</p>
+<pre><pre class="playground"><code class="language-rust no_run"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use tpt_nrg_core::EnergySystem;
+use tpt_nrg_economic_dispatch::economic_dispatch;
+
+let system = EnergySystem::from_json(/* ... */)?;
+let r = economic_dispatch(&amp;system, 200.0)?;
+// r.generator_outputs_mw
+// r.total_cost_dollar_per_h
+// r.marginal_cost_dollar_per_mwh (λ)
+// r.losses_mw
+<span class="boring">}</span></code></pre></pre>
+<p>Plus a <strong>storage arbitrage</strong> helper:</p>
+<pre><pre class="playground"><code class="language-rust no_run"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use tpt_nrg_economic_dispatch::storage_arbitrage;
+
+let plan = storage_arbitrage(
+    &amp;[10.0, 15.0, 20.0, 50.0, 80.0, 100.0], // prices $/MWh
+    1.0,                                      // 1 h intervals
+    100.0,                                    // 100 MWh capacity
+    50.0,                                     // 50 MW power
+    0.9,                                      // 90% round-trip
+);
+// plan.charge_mw, plan.discharge_mw, plan.state_of_charge, plan.net_revenue_dollar
+<span class="boring">}</span></code></pre></pre>
+<h2 id="tpt-nrg-reserve"><a class="header" href="#tpt-nrg-reserve"><code>tpt-nrg-reserve</code></a></h2>
+<p>Spinning reserve headroom and contingency (NERC-style N-1) requirement, combined in a <code>ReserveAssessment</code>.</p>
+<pre><pre class="playground"><code class="language-rust no_run"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use tpt_nrg_reserve::{assess_reserves, contingency_reserve_requirement, spinning_reserve_margin};
+
+let spinning = spinning_reserve_margin(200.0, 100.0); // MW headroom on online units
+let conting  = contingency_reserve_requirement(100.0, 500.0, 0.03); // N-1 + 3% load
+let assessment = assess_reserves(200.0, 100.0, 100.0, 500.0, 0.03);
+// assessment.spinning_available_mw
+// assessment.contingency_required_mw
+// assessment.margin_mw  (negative = reserve deficit)
+<span class="boring">}</span></code></pre></pre>
+<p><code>spinning_reserve_margin</code> is pure availability headroom (<code>online − output</code>, floored at 0) — it does <em>not</em> subtract load, because headroom already nets out the load being served.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="crate-microgrid.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="crate-economics.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="crate-microgrid.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="crate-economics.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>
