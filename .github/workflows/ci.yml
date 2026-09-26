@@ -189,14 +189,6 @@ jobs:
   publish-check:
     name: publish dry run
     runs-on: ubuntu-latest
-    # Only a manifest change can break publication, so this is the one job
-    # worth skipping on a docs-only pull request.
-    paths:
-      - "**/Cargo.toml"
-      - "Cargo.lock"
-      - ".github/workflows/release.yml"
-      - "tools/publish-dry-run.sh"
-      - "tools/workspace-crates.py"
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable

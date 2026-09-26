@@ -42,7 +42,7 @@ jobs:
   publish-pypi:
     name: Publish to PyPI
     runs-on: ubuntu-latest
-    if: ${{ env.PYPI_API_TOKEN != '' }}
+    if: ${{ secrets.PYPI_API_TOKEN != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -63,7 +63,7 @@ jobs:
   publish-npm:
     name: Publish to npm
     runs-on: ubuntu-latest
-    if: ${{ env.NPM_TOKEN != '' }}
+    if: ${{ secrets.NPM_TOKEN != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

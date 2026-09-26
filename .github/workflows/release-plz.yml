@@ -28,12 +28,12 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
       - uses: dtolnay/rust-toolchain@stable
-      - name: Install release-plz
-        uses: release-plz/release-plz@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Update the changelogs and versions
-        run: release-plz release --pr --token "${{ secrets.GITHUB_TOKEN }}"
+        uses: release-plz/action@v0.5
+        with:
+          command: release-pr
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Fail if a crate cannot be packaged
         # The release PR is worthless if the version it bumps to cannot be
         # published, so run the same pre-flight the release workflow relies on.
