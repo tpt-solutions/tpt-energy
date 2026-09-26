@@ -219,7 +219,11 @@ jobs:
       - name: Install tarpaulin
         run: cargo install cargo-tarpaulin
       - name: Generate coverage
-        run: cargo tarpaulin --workspace --out Xml --all-features
+        # tpt-nrg-python is excluded for the same reason as in the `test` job
+        # above: pyo3's `extension-module` feature (pulled in by
+        # --all-features) omits the libpython link, which breaks the
+        # standalone test binary tarpaulin builds.
+        run: cargo tarpaulin --workspace --out Xml --all-features --exclude tpt-nrg-python
       - name: Upload to Codecov
         uses: codecov/codecov-action@v4
         with:

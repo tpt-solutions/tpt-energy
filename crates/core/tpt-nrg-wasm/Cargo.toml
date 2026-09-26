@@ -48,9 +48,10 @@ serde-wasm-bindgen = { version = "0.6", optional = true }
 
 [dev-dependencies]
 
-# The Rust compiler emits `memory.copy`/`memory.fill` (bulk-memory) instructions
-# by default for `wasm32-unknown-unknown`. `wasm-pack`'s bundled `wasm-opt`
-# validates the module before optimizing it and rejects those instructions
-# unless the feature is explicitly enabled.
+# The Rust compiler emits `memory.copy`/`memory.fill` (bulk-memory) and
+# `i32.trunc_sat_f64_s`-style non-trapping float-to-int conversions by default
+# for `wasm32-unknown-unknown`. `wasm-pack`'s bundled `wasm-opt` validates the
+# module before optimizing it and rejects those instructions unless the
+# features are explicitly enabled.
 [package.metadata.wasm-pack.profile.release]
-wasm-opt = ["-O", "--enable-bulk-memory"]
+wasm-opt = ["-O", "--enable-bulk-memory", "--enable-nontrapping-float-to-int"]

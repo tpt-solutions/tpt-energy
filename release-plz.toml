@@ -12,34 +12,13 @@
 # workflow therefore only ever runs `release-plz release --pr`, and a
 # maintainer pushes the tag once that PR is merged.
 #
-# Schema: release-plz 1.x.
+# Schema: release-plz 1.x. Field names are validated against
+# https://raw.githubusercontent.com/release-plz/release-plz/main/.schema/latest.json
+# (additionalProperties is false, so an unknown field fails the whole config).
 
 [workspace]
 # Both the workspace-level and the per-crate changelogs are updated.
 changelog_update = true
-changelog_commit_message = "chore: release {{version}}"
-changelog_labels = ["changelog", "release"]
-# Conventional-commit prefixes that are not user-facing.
-changelog_ignore_labels = ["ignore", "chore"]
-# One version for the whole workspace, which is what `[workspace.package]`
-# already implies.
-version_toml = "./Cargo.toml"
-version_tag_regex = "^v[0-9]+\\.[0-9]+\\.[0-9]+$"
 # Do not tag or create a GitHub release: `release.yml` owns both.
 git_release_enable = false
-git_release_name = "v{{version}}"
-tag_name = "v{{version}}"
-tag_message = "Release v{{version}}"
-# The release PR is cut from the default branch and merged back into it.
-allow_branch = ["master", "main"]
-# Dependencies are bumped together; the workspace shares one version already.
-publish_dependencies = true
-publish_time = false
-# Respect the repository's own SemVer cadence: only commits marked with
-# `release-plz` in the message force a release.
-force_release = false
-
-[package]
-changelog_update = true
-# Per-crate changelogs, so `crates/*/<crate>/CHANGELOG.md` stay accurate.
-changelog_path = "CHANGELOG.md"
+git_tag_name = "v{{version}}"
