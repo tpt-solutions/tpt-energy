@@ -41,19 +41,64 @@ use crate::error::{field_index, format_number, InteropError, InteropResult};
 /// Degrees-to-radians conversion factor.
 const DEG_TO_RAD: f64 = std::f64::consts::PI / 180.0;
 
-/// Candidate sub-block counts per bus record, newest dialect first.
+/// Candidate sub-block counts per bus record, narrowest record first.
 ///
 /// A bus record is `/`-delimited into: the bus fields, the load, the fixed
 /// shunt, and up to three generator entries. PSS/E only ever *appends* to a
-/// record, so the per-record sub-block count is what identifies the dialect.
-/// Trying the candidates largest-first and keeping the one that divides the
-/// block exactly identifies v33 (6), v32 (5), v30 (4), and v29 (3).
-const BUS_SUBDIVISIONS: [usize; 4] = [6, 5, 4, 3];
+/// record, so the per-record sub-block count is what identifies the dialect:
+/// v29 has 3, v30 has 4, v32 has 5, and v33 has 6.
+const BUS_SUBDIVISIONS: [usize; 4] = [3, 4, 5, 6];
 
 /// Minimum fields in the leading sub-block of a bus record: `I NAME BASKV IDE
-/// AREA ZONE OWNER VMAG VA` plus the two voltage-limit fields that every
-/// supported dialect carries.
-const BUS_FIELDS_MIN: usize = 10;
+/// AREA ZONE OWNER VMAG VA`, which every supported dialect carries and which
+/// is enough to tell a bus sub-block apart from a load or machine sub-block.
+const BUS_FIELDS_MIN: usize = 9;
+
+/// Candidate sub-block counts per generator record.
+///
+/// A v33 generator record is the machine block plus up to four
+/// `TransformerWinding` blocks and two shunt blocks; narrower dialects have
+/// fewer. Only the machine block is read, so the count is inferred rather than
+/// declared.
+const GENERATOR_SUBDIVISIONS: [usize; 7] = [1, 2, 3, 4, 5, 6, 7];
+
+/// Minimum fields in the leading sub-block of a generator record: `I ID PG QG
+/// QT QB VS MBASE ZR ZX RT XT GTAP STAT RMPCT PT PB`.
+const GENERATOR_FIELDS_MIN: usize = 17;
+
+/// Infer how many sub-blocks make up one record in a data block.
+///
+/// Divisibility alone is ambiguous — a v29 bus file with an even number of
+/// buses also divides by 6 — so each candidate is additionally required to
+/// produce records whose leading sub-block carries at least `min_fields`
+/// fields. The narrowest candidate that satisfies both tests wins, which picks
+/// 3 for a v29 bus file and 6 for a v33 one without reading the case revision,
+/// and picks 1 for a minimal generator block and 7 for a full v33 one.
+fn record_size(sub_blocks: &[SubBlock], candidates: &[usize], min_fields: usize) -> usize {
+    if sub_blocks.is_empty() {
+        return 1;
+    }
+    for &candidate in candidates {
+        if candidate == 0 || sub_blocks.len() % candidate != 0 {
+            continue;
+        }
+        let records = group_records(sub_blocks, candidate);
+        if !records.is_empty() && records.iter().all(|r| r[0].len() >= min_fields) {
+            return candidate;
+        }
+    }
+    1
+}
+
+/// Sub-block count per bus record for the given `BUS DATA` block.
+fn bus_record_size(sub_blocks: &[SubBlock]) -> usize {
+    record_size(sub_blocks, &BUS_SUBDIVISIONS, BUS_FIELDS_MIN)
+}
+
+/// Sub-block count per generator record for the given `GENERATOR DATA` block.
+fn generator_record_size(sub_blocks: &[SubBlock]) -> usize {
+    record_size(sub_blocks, &GENERATOR_SUBDIVISIONS, GENERATOR_FIELDS_MIN)
+}
 
 /// Map a PSS/E bus type code (`IDE`) to a [`BusType`].
 ///
@@ -117,7 +162,9 @@ fn parse_sections(text: &str) -> RawSections {
             current = Some(name);
             continue;
         }
-        let Some(name) = current.clone() else { continue };
+        let Some(name) = current.clone() else {
+            continue;
+        };
         if upper.starts_with("END") {
             current = None;
             continue;
@@ -131,11 +178,7 @@ fn parse_sections(text: &str) -> RawSections {
         }
         for piece in pieces {
             let tokens: Vec<String> = piece.split_whitespace().map(str::to_string).collect();
-            sections
-                .map
-                .entry(name.clone())
-                .or_default()
-                .push(tokens);
+            sections.map.entry(name.clone()).or_default().push(tokens);
         }
     }
     sections
@@ -151,33 +194,6 @@ fn group_records(sub_blocks: &[SubBlock], per_record: usize) -> Vec<Vec<SubBlock
         .map(<[SubBlock]>::to_vec)
         .filter(|r| r.len() == per_record)
         .collect()
-}
-
-/// Infer how many sub-blocks make up one bus record.
-///
-/// Divisibility alone is ambiguous (a v29 file with an even number of buses
-/// also divides by 3 and 6), so each candidate is additionally required to
-/// produce records whose first sub-block looks like a bus: at least
-/// [`BUS_FIELDS_MIN`] fields, a positive integer bus number, and a base kV.
-fn bus_record_size(sub_blocks: &[SubBlock]) -> usize {
-    for candidate in BUS_SUBDIVISIONS {
-        if sub_blocks.is_empty() || sub_blocks.len() % candidate != 0 {
-            continue;
-        }
-        let records = group_records(sub_blocks, candidate);
-        if !records.is_empty() && records.iter().all(|r| looks_like_bus(&r[0])) {
-            return candidate;
-        }
-    }
-    1
-}
-
-/// True if a sub-block has the shape of the leading sub-block of a bus record.
-fn looks_like_bus(fields: &[String]) -> bool {
-    if fields.len() < BUS_FIELDS_MIN {
-        return false;
-    }
-    idx(fields, 0) > 0 && opt_num(fields, 2) > 0.0
 }
 
 /// Recognize `BEGIN <NAME> DATA` and return the block name.
@@ -260,39 +276,52 @@ pub fn from_psse(text: &str) -> InteropResult<EnergySystem> {
         sys.add_bus(bus).map_err(InteropError::InvalidSystem)?;
     }
 
-    for (i, fields) in single_sub_blocks(sections.get("BRANCH")).into_iter().enumerate() {
+    for (i, fields) in single_sub_blocks(sections.get("BRANCH"))
+        .into_iter()
+        .enumerate()
+    {
         let branch = psse_branch_to_core(i + 1, &fields)?;
         sys.add_branch(branch)
             .map_err(InteropError::InvalidSystem)?;
     }
 
-    if sections.get("GENERATOR").is_empty() {
+    let gen_blocks = sections.get("GENERATOR");
+    if gen_blocks.is_empty() {
         add_implicit_generators(&mut sys)?;
     } else {
-        for (i, fields) in single_sub_blocks(sections.get("GENERATOR"))
+        let per_record = generator_record_size(gen_blocks);
+        for (i, fields) in group_records(gen_blocks, per_record)
             .into_iter()
             .enumerate()
         {
-            let gen = psse_gen_to_core(i + 1, &fields)?;
+            let gen = psse_gen_to_core(i + 1, &fields[0])?;
             sys.add_generator(gen)
                 .map_err(InteropError::InvalidSystem)?;
         }
     }
 
-    for (i, fields) in single_sub_blocks(sections.get("LOAD")).into_iter().enumerate() {
+    for (i, fields) in single_sub_blocks(sections.get("LOAD"))
+        .into_iter()
+        .enumerate()
+    {
         let load = psse_load_to_core(i + 1, &fields)?;
         sys.add_load(load).map_err(InteropError::InvalidSystem)?;
     }
 
-    sys.metadata.insert("source".into(), serde_json::json!("PSS/E"));
-    sys.metadata.insert("base_mva".into(), serde_json::json!(base_mva));
+    sys.metadata
+        .insert("source".into(), serde_json::json!("PSS/E"));
+    sys.metadata
+        .insert("base_mva".into(), serde_json::json!(base_mva));
     sys.validate().map_err(InteropError::InvalidSystem)?;
     Ok(sys)
 }
 
 /// Flatten single-sub-block records into their field lists.
 fn single_sub_blocks(blocks: &[SubBlock]) -> Vec<SubBlock> {
-    group_records(blocks, 1).into_iter().map(|r| r[0].clone()).collect()
+    group_records(blocks, 1)
+        .into_iter()
+        .map(|r| r[0].clone())
+        .collect()
 }
 
 /// Read `SBASE`, `BASFRQ`, and the case identifier from `SYSTEM DATA`.
@@ -355,12 +384,10 @@ fn psse_bus_to_core(bus: &[String], load: &[String]) -> InteropResult<Bus> {
     let name = text(bus, 1, &format!("BUS {id}"));
     let raw_kv = opt_num(bus, 2);
     let base_kv = if raw_kv > 0.0 { raw_kv } else { 100.0 };
-    Ok(
-        Bus::new(id, name, bus_type_from_psse(idx(bus, 3))?)
-            .with_voltage_pu(opt_num(bus, 7), opt_num(bus, 8) * DEG_TO_RAD)
-            .with_base_kv(base_kv)
-            .with_load(opt_num(load, 4), opt_num(load, 5)),
-    )
+    Ok(Bus::new(id, name, bus_type_from_psse(idx(bus, 3))?)
+        .with_voltage_pu(opt_num(bus, 7), opt_num(bus, 8) * DEG_TO_RAD)
+        .with_base_kv(base_kv)
+        .with_load(opt_num(load, 4), opt_num(load, 5)))
 }
 
 /// Convert a PSS/E branch record to a [`Branch`].
@@ -380,20 +407,22 @@ fn psse_branch_to_core(id: usize, f: &[String]) -> InteropResult<Branch> {
     let rating = if rate_a > 0.0 { rate_a } else { 100.0 };
     // Transformer taps live in the branch *winding* records, which this
     // subset does not read, so a unity tap is the correct line default.
-    let in_service = if f.len() > 13 { opt_num(f, 13) != 0.0 } else { true };
-    Ok(
-        Branch::new(
-            id,
-            format!("{from_bus}-{to_bus}-{ckt}"),
-            from_bus,
-            to_bus,
-            opt_num(f, 3),
-            opt_num(f, 4),
-        )
-        .with_susceptance(opt_num(f, 5))
-        .with_rating(rating)
-        .with_in_service(in_service),
+    let in_service = if f.len() > 13 {
+        opt_num(f, 13) != 0.0
+    } else {
+        true
+    };
+    Ok(Branch::new(
+        id,
+        format!("{from_bus}-{to_bus}-{ckt}"),
+        from_bus,
+        to_bus,
+        opt_num(f, 3),
+        opt_num(f, 4),
     )
+    .with_susceptance(opt_num(f, 5))
+    .with_rating(rating)
+    .with_in_service(in_service))
 }
 
 /// Convert a PSS/E generator record to a [`Generator`].
@@ -410,7 +439,11 @@ fn psse_gen_to_core(id: usize, f: &[String]) -> InteropResult<Generator> {
             "must be a positive integer",
         ));
     }
-    let in_service = if f.len() > 13 { opt_num(f, 13) != 0.0 } else { true };
+    let in_service = if f.len() > 13 {
+        opt_num(f, 13) != 0.0
+    } else {
+        true
+    };
     let raw_vs = opt_num(f, 6);
     let mut gen = Generator::new(
         id,
@@ -439,14 +472,12 @@ fn psse_load_to_core(id: usize, f: &[String]) -> InteropResult<Load> {
             "must be a positive integer",
         ));
     }
-    let in_service = if f.len() > 2 { opt_num(f, 2) != 0.0 } else { true };
-    let mut load = Load::new(
-        id,
-        format!("L{id}"),
-        bus_id,
-        opt_num(f, 5),
-        opt_num(f, 7),
-    );
+    let in_service = if f.len() > 2 {
+        opt_num(f, 2) != 0.0
+    } else {
+        true
+    };
+    let mut load = Load::new(id, format!("L{id}"), bus_id, opt_num(f, 5), opt_num(f, 7));
     load.in_service = in_service;
     Ok(load)
 }
@@ -466,8 +497,7 @@ fn add_implicit_generators(sys: &mut EnergySystem) -> InteropResult<()> {
         let id = i + 1;
         let p_max = (base_kv * 0.5).max(10.0);
         sys.add_generator(
-            Generator::new(id, format!("G{id}"), GeneratorType::Thermal, p_max, 0.0)
-                .at_bus(bus_id),
+            Generator::new(id, format!("G{id}"), GeneratorType::Thermal, p_max, 0.0).at_bus(bus_id),
         )
         .map_err(InteropError::InvalidSystem)?;
     }
@@ -487,17 +517,25 @@ fn raw_field(v: f64) -> String {
 }
 
 /// Truncate and upper-case a name to the 12 characters PSS/E allows.
+///
+/// Non-alphanumeric characters are *removed* rather than replaced with a
+/// space, because a RAW record is whitespace delimited: a name containing a
+/// space would split into two fields and shift every later field by one.
 fn psse_name(name: &str, fallback: &str) -> String {
-    let source = if name.trim().is_empty() { fallback } else { name };
+    let source = if name.trim().is_empty() {
+        fallback
+    } else {
+        name
+    };
     let cleaned: String = source
         .chars()
-        .map(|c| if c.is_ascii_alphanumeric() { c.to_ascii_uppercase() } else { ' ' })
+        .filter(char::is_ascii_alphanumeric)
+        .map(|c| c.to_ascii_uppercase())
         .collect();
-    let trimmed = cleaned.trim();
-    if trimmed.is_empty() {
+    if cleaned.is_empty() {
         fallback.to_string()
     } else {
-        trimmed.chars().take(12).collect()
+        cleaned.chars().take(12).collect()
     }
 }
 
@@ -511,6 +549,30 @@ fn psse_name(name: &str, fallback: &str) -> String {
 /// Returns [`InteropError::BadValue`] if the system contains a non-finite
 /// number or a bus name that cannot be encoded.
 pub fn to_psse(system: &EnergySystem) -> InteropResult<String> {
+    check_finite(system)?;
+    let mut out = String::with_capacity(4096);
+    let case_id = psse_name(&system.id, "CASE");
+
+    let _ = writeln!(out, "BEGIN SYSTEM DATA");
+    let _ = writeln!(
+        out,
+        "{case_id} 33 1.10 33 {} /",
+        raw_field(system.frequency_hz)
+    );
+    let _ = writeln!(out, "{} 33 100.00 /", raw_field(system.base_mva));
+    let _ = writeln!(out, "END SYSTEM DATA");
+
+    write_bus_block(&mut out, system);
+    write_branch_block(&mut out, system);
+    write_generator_block(&mut out, system);
+    write_load_block(&mut out, system);
+
+    let _ = writeln!(out, "END");
+    Ok(out)
+}
+
+/// Reject non-finite values, which a RAW file cannot represent.
+fn check_finite(system: &EnergySystem) -> InteropResult<()> {
     for b in &system.buses {
         if !b.voltage_magnitude_pu.is_finite() || !b.load_mw.is_finite() {
             return Err(InteropError::bad_value(
@@ -520,24 +582,21 @@ pub fn to_psse(system: &EnergySystem) -> InteropResult<String> {
             ));
         }
     }
-    let mut out = String::with_capacity(4096);
-    let case_id = psse_name(&system.id, "CASE");
+    Ok(())
+}
 
-    let _ = writeln!(out, "BEGIN SYSTEM DATA");
-    let _ = writeln!(out, "{case_id} 33 1.10 33 {} /", raw_field(system.frequency_hz));
-    let _ = writeln!(out, "{} 33 100.00 /", raw_field(system.base_mva));
-    let _ = writeln!(out, "END SYSTEM DATA");
-
+/// Write the `BUS DATA` block, including the per-bus load sub-block.
+fn write_bus_block(out: &mut String, system: &EnergySystem) {
     let _ = writeln!(out, "BEGIN BUS DATA");
     for b in &system.buses {
-        // v33 bus record: the bus fields, then the load sub-block, the fixed
+        // v33 bus record: the bus fields, the load sub-block, the fixed
         // shunt sub-block, and three machine sub-blocks (only the first of
         // which this crate uses). Emitting all six keeps the record count
         // consistent with the dialect detection in `bus_record_size`.
         let _ = writeln!(
             out,
             "{:>7} {:<12} {:>7.2} {:>2} {:>3} {:>3} {:>3} {:>9.5} {:>10.5} / \
-             1 1 1 1 {} {} / / / / / /",
+             1 1 1 1 {} {} / / / / /",
             b.id,
             psse_name(&b.name, &format!("BUS {}", b.id)),
             b.base_kv,
@@ -552,13 +611,13 @@ pub fn to_psse(system: &EnergySystem) -> InteropResult<String> {
         );
     }
     let _ = writeln!(out, "END BUS DATA");
+}
 
+/// Write the `BRANCH DATA` block.
+fn write_branch_block(out: &mut String, system: &EnergySystem) {
     let _ = writeln!(out, "BEGIN BRANCH DATA");
     for br in &system.branches {
-        let ckt = br
-            .name
-            .rsplit_once('-')
-            .map_or("1", |(_, c)| c);
+        let ckt = br.name.rsplit_once('-').map_or("1", |(_, c)| c);
         let _ = writeln!(
             out,
             "{:>7} {:>7} {:<2} {:>10.5} {:>10.5} {:>10.5} {:>6.0} {:>6.0} {:>6.0} /",
@@ -574,14 +633,18 @@ pub fn to_psse(system: &EnergySystem) -> InteropResult<String> {
         );
     }
     let _ = writeln!(out, "END BRANCH DATA");
+}
 
+/// Write the `GENERATOR DATA` block.
+fn write_generator_block(out: &mut String, system: &EnergySystem) {
     let _ = writeln!(out, "BEGIN GENERATOR DATA");
     for g in &system.generators {
-        // Machine block: I ID PG QG QT QB VS MBASE / ZR ZX RT XT GTAP STAT
-        // RMPCT PT PB.
+        // One sub-block: the machine block. Winding and shunt sub-blocks are
+        // optional in PSS/E and unused by this crate, so they are omitted
+        // rather than written as blanks.
         let _ = writeln!(
             out,
-            "{:>7} {:<2} {:>9.4} {:>9.4} {:>9.4} {:>9.4} {:>8.4} {:>7.0} / \
+            "{:>7} {:<2} {:>9.4} {:>9.4} {:>9.4} {:>9.4} {:>8.4} {:>7.0} \
              {:>9.4} {:>9.4} {:>9.4} {:>9.4} {:>8.4} {:>2} {:>7.4} {:>9.4} {:>9.4} /",
             g.bus_id,
             "'1'",
@@ -603,7 +666,13 @@ pub fn to_psse(system: &EnergySystem) -> InteropResult<String> {
         );
     }
     let _ = writeln!(out, "END GENERATOR DATA");
+}
 
+/// Write the `LOAD DATA` block.
+///
+/// The bus-level loads already went into the per-bus load sub-block, so only
+/// the explicit `EnergySystem::loads` appear here.
+fn write_load_block(out: &mut String, system: &EnergySystem) {
     let _ = writeln!(out, "BEGIN LOAD DATA");
     for l in &system.loads {
         let _ = writeln!(
@@ -621,6 +690,4 @@ pub fn to_psse(system: &EnergySystem) -> InteropResult<String> {
         );
     }
     let _ = writeln!(out, "END LOAD DATA");
-    let _ = writeln!(out, "END");
-    Ok(out)
 }

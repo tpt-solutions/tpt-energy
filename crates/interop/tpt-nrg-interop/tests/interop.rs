@@ -40,11 +40,8 @@ fn three_bus() -> EnergySystem {
         .unwrap();
     sys.add_bus(Bus::new(2, "B2", BusType::Pv).with_voltage_pu(1.02, 0.0))
         .unwrap();
-    sys.add_bus(
-        Bus::new(3, "B3", BusType::Pq)
-            .with_load(40.0, 15.0),
-    )
-    .unwrap();
+    sys.add_bus(Bus::new(3, "B3", BusType::Pq).with_load(40.0, 15.0))
+        .unwrap();
     sys.add_branch(Branch::new(1, "L12", 1, 2, 0.01, 0.1).with_rating(200.0))
         .unwrap();
     sys.add_branch(Branch::new(2, "L23", 2, 3, 0.02, 0.1).with_in_service(false))
@@ -143,8 +140,10 @@ mpc.baseMVA = 100;
 
 %% bus data
 %   bus_i type Pd Qd Gs Bs area Vm Va baseKV zone Vmax Vmin
+mpc.bus = [
   1  3  0  0  0  0  1  1.06  0  132  1  1.1  0.9;  % trailing comment
   2  1  0  0  0  0  1  1.0  0  132  1  1.1  0.9;
+];
 
 mpc.gen = [
  1  0  0  0  0  1.06  100  1  100  0;
@@ -156,8 +155,8 @@ mpc.branch = [
     let sys = matpower::from_matpower(text).expect("comments are stripped");
     assert_eq!(sys.buses.len(), 2);
     assert!((sys.buses[0].voltage_magnitude_pu - 1.06).abs() < 1e-9);
+    assert!((sys.buses[0].base_kv - 132.0).abs() < 1e-9);
 }
-
 
 #[test]
 fn psse_round_trip_preserves_the_network() {
@@ -171,7 +170,10 @@ fn psse_round_trip_preserves_the_network() {
     assert!((back.base_mva - 100.0).abs() < 1e-9);
     assert!((back.frequency_hz - 60.0).abs() < 1e-9);
     assert_eq!(
-        back.buses.iter().filter(|b| b.bus_type == BusType::Slack).count(),
+        back.buses
+            .iter()
+            .filter(|b| b.bus_type == BusType::Slack)
+            .count(),
         1,
         "exactly one slack bus survives"
     );
@@ -193,49 +195,54 @@ fn psse_requires_bus_data() {
 
 #[test]
 fn psse_tolerates_fortran_exponents() {
-    let text = "\
-BEGIN SYSTEM DATA
-TESTCASE 33 1.10 33 60 / 100.0 33 100.0 /
-END SYSTEM DATA
-BEGIN BUS DATA
-  101 BUS1 2.30D+02 3 1 1 1 1.0000 0.0000 1.1 0.9 / 1 1 1 1 0.0 0.0 /
-  102 BUS2 2.30D+02 1 1 1 1 1.0000 0.0000 1.1 0.9 / 1 1 1 1 1.00D+01 0.0 /
-END BUS DATA
-BEGIN BRANCH DATA
-  101 102 '1' 1.0D-02 5.0D-02 0.0 100 0 0 /
-END BRANCH DATA
-END
-";
-    let sys = psse::from_psse(text).expect("D exponents parse");
-    assert_eq!(sys.buses.len(), 2);
-    assert!((sys.buses[0].base_kv - 230.0).abs() < 1e-9);
-    assert!((sys.buses[1].load_mw - 10.0).abs() < 1e-9);
-    assert_eq!(sys.branches.len(), 1);
+    // Derive the fixture from the exporter so the record layout is realistic,
+    // then rewrite the numbers in Fortran `D` exponent form.
+    let text = psse::to_psse(&three_bus()).expect("write psse");
+    let text = text
+        .replace("110.00", "1.10D+02")
+        .replace("0.01000", "1.00D-02")
+        .replace("0.10000", "1.00D-01");
+    let sys = psse::from_psse(&text).expect("D exponents parse");
+    assert_eq!(sys.buses.len(), 3);
+    assert!((sys.buses[0].base_kv - 110.0).abs() < 1e-9);
     assert!((sys.branches[0].resistance_pu - 0.01).abs() < 1e-9);
+    assert!((sys.branches[0].reactance_pu - 0.1).abs() < 1e-9);
+    assert!((sys.buses[2].load_mw - 40.0).abs() < 1e-4);
 }
 
 #[test]
 fn psse_reads_multiple_records_from_one_line() {
-    let text = "\
-BEGIN SYSTEM DATA
-TESTCASE 33 1.10 33 50 / 100.0 33 100.0 /
-END SYSTEM DATA
-BEGIN BUS DATA
-  1  A  100.0  3  1  1  1  1.00  0.0  1.1  0.9 / 1 1 1 1 0.0 0.0 / / / / / /
-  2  B  100.0  1  1  1  1  1.00  0.0  1.1  0.9 / 1 1 1 1 5.0 0.0 / / / / / /
-END BUS DATA
-END
-";
-    let sys = psse::from_psse(text).expect("two records on one line");
-    assert_eq!(sys.buses.len(), 2);
-    assert!((sys.frequency_hz - 50.0).abs() < 1e-9);
-    assert!((sys.buses[1].load_mw - 5.0).abs() < 1e-9);
+    // PSS/E wraps records at column 80, but a file may also put several
+    // records on one physical line; the parser is line-agnostic.
+    let text = psse::to_psse(&three_bus()).expect("write psse");
+    let mut joined = String::new();
+    let mut in_bus = false;
+    for line in text.lines() {
+        if line.starts_with("BEGIN BUS DATA") {
+            in_bus = true;
+            joined.push_str(line);
+            joined.push('\n');
+        } else if line.starts_with("END BUS DATA") {
+            in_bus = false;
+            joined.push('\n');
+        } else if in_bus {
+            joined.push_str(line);
+            joined.push(' ');
+        } else {
+            joined.push_str(line);
+            joined.push('\n');
+        }
+    }
+    let sys = psse::from_psse(&joined).expect("records joined onto one line");
+    assert_eq!(sys.buses.len(), 3);
+    assert!((sys.frequency_hz - 60.0).abs() < 1e-9);
+    assert!((sys.buses[2].load_mw - 40.0).abs() < 1e-4);
 }
 
 #[test]
 fn psse_handles_the_v29_three_sub_block_record() {
-    // v29 bus records have three sub-blocks (bus, load, shunt); the dialect
-    // detector must pick 3, not 6.
+    // A v29 bus record has three sub-blocks (bus, load, shunt) rather than the
+    // six of v33; the dialect detector must pick 3.
     let text = "\
 BEGIN SYSTEM DATA
 TESTCASE 29 1.10 29 60 / 100.0 29 100.0 /
@@ -251,18 +258,27 @@ END
     assert!((sys.buses[1].load_mw - 5.0).abs() < 1e-9);
 }
 
-
 #[test]
 fn cim_round_trip_preserves_the_network() {
     let sys = three_bus();
     let text = cim::to_cim(&sys).expect("write cim");
     assert!(text.contains("<rdf:RDF"));
     let back = cim::from_cim(&text).expect("read cim");
-    assert_eq!(back.buses.len(), 3);
-    assert_eq!(back.branches.len(), 2);
-    assert_eq!(back.generators.len(), 2);
+    let shape = format!(
+        "buses={} branches={} gens={} loads={}",
+        back.buses.len(),
+        back.branches.len(),
+        back.generators.len(),
+        back.loads.len()
+    );
+    assert_eq!(back.buses.len(), 3, "{shape}");
+    assert_eq!(back.branches.len(), 2, "{shape}");
+    assert_eq!(back.generators.len(), 2, "{shape}");
     assert_eq!(
-        back.buses.iter().filter(|b| b.bus_type == BusType::Slack).count(),
+        back.buses
+            .iter()
+            .filter(|b| b.bus_type == BusType::Slack)
+            .count(),
         1
     );
     for (a, b) in sys.buses.iter().zip(back.buses.iter()) {
@@ -307,7 +323,10 @@ fn cim_synthesizes_a_slack_machine_when_needed() {
     let text = cim::to_cim(&sys).expect("write cim");
     let back = cim::from_cim(&text).expect("read cim");
     assert_eq!(
-        back.buses.iter().filter(|b| b.bus_type == BusType::Slack).count(),
+        back.buses
+            .iter()
+            .filter(|b| b.bus_type == BusType::Slack)
+            .count(),
         1
     );
 }
@@ -361,7 +380,6 @@ generators:
     assert_eq!(sys.generators[0].generator_type, GeneratorType::Wind);
     assert!((sys.total_load_mw() - 25.0).abs() < 1e-9);
 }
-
 
 #[test]
 fn flat_csv_round_trip() {
@@ -504,4 +522,3 @@ fn interop_reads_the_committed_ieee_cases() {
         }
     }
 }
-

@@ -1,5 +1,5 @@
 [package]
-name = "tpt-nrg-wasm"
+name = "tpt-nrg-python"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -7,12 +7,19 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 authors.workspace = true
-description = "TPT Energy WebAssembly bindings for browser and edge control"
-categories = ["science", "simulation", "wasm"]
-keywords = ["power-systems", "wasm", "webassembly", "energy", "edge"]
+description = "Python bindings for TPT Energy: power flow, dispatch, fault, LCOE, carbon, interop and SVG rendering"
+categories = ["science", "api-bindings", "simulation"]
+keywords = ["power-systems", "python", "energy", "power-flow", "matpower"]
+# Built and published with maturin, not `cargo publish`.
+publish = false
+
+[lib]
+name = "tpt_nrg"
+crate-type = ["cdylib", "rlib"]
 
 [lints.rust]
-unsafe_code = "forbid"
+# pyo3's macros generate `unsafe` blocks internally.
+unsafe_code = "allow"
 missing_docs = "warn"
 
 [lints.clippy]
@@ -20,25 +27,19 @@ pedantic = { level = "warn", priority = -1 }
 missing_errors_doc = "warn"
 missing_panics_doc = "warn"
 
-[features]
-# Default = native shim (no wasm-bindgen dependency). Enable the `wasm`
-# feature when targeting `wasm32-unknown-unknown` for browser builds.
-default = []
-wasm = ["dep:wasm-bindgen", "dep:serde-wasm-bindgen"]
-
 [dependencies]
 tpt-nrg-core = { workspace = true }
 tpt-nrg-powerflow = { workspace = true }
-tpt-nrg-der = { workspace = true }
+tpt-nrg-fault = { workspace = true }
 tpt-nrg-economic-dispatch = { workspace = true }
 tpt-nrg-unit-commitment = { workspace = true }
 tpt-nrg-lcoe = { workspace = true }
 tpt-nrg-carbon = { workspace = true }
+tpt-nrg-interop = { workspace = true }
 tpt-nrg-viz = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
-wasm-bindgen = { version = "0.2", optional = true }
-serde-wasm-bindgen = { version = "0.6", optional = true }
+pyo3 = { version = "0.29", features = ["extension-module", "abi3-py39"] }
 
 [dev-dependencies]

@@ -226,9 +226,8 @@ pub fn parse_xml(text: &str) -> InteropResult<XmlElement> {
             continue;
         }
         if chars[i..].starts_with(&['<', '?']) {
-            let end = find_marker(&chars, i, "?>").ok_or_else(|| {
-                InteropError::parse("cim", "unterminated processing instruction")
-            })?;
+            let end = find_marker(&chars, i, "?>")
+                .ok_or_else(|| InteropError::parse("cim", "unterminated processing instruction"))?;
             i = end + 2;
             continue;
         }
@@ -252,18 +251,14 @@ pub fn parse_xml(text: &str) -> InteropResult<XmlElement> {
 }
 
 /// Handle a closing tag at `i`, returning the index just past it.
-fn close_element(
-    chars: &[char],
-    i: usize,
-    stack: &mut Vec<XmlElement>,
-) -> InteropResult<usize> {
+fn close_element(chars: &[char], i: usize, stack: &mut Vec<XmlElement>) -> InteropResult<usize> {
     let end = find_marker(chars, i, ">")
         .ok_or_else(|| InteropError::parse("cim", "unterminated closing tag"))?;
     let raw: String = chars[i + 2..end].iter().collect();
     let name = local_name(raw.trim());
-    let closed = stack
-        .pop()
-        .ok_or_else(|| InteropError::parse("cim", format!("closing tag </{name}> with no opener")))?;
+    let closed = stack.pop().ok_or_else(|| {
+        InteropError::parse("cim", format!("closing tag </{name}> with no opener"))
+    })?;
     if closed.name != name {
         return Err(InteropError::parse(
             "cim",
@@ -385,14 +380,21 @@ pub fn from_cim(text: &str) -> InteropResult<EnergySystem> {
     }
 
     let mut system = read_model(&index)?;
-    system.metadata.insert("source".into(), serde_json::json!("CIM/IEC 61970"));
+    system
+        .metadata
+        .insert("source".into(), serde_json::json!("CIM/IEC 61970"));
     system.validate().map_err(InteropError::InvalidSystem)?;
     Ok(system)
 }
 
 /// Read buses, branches, generators, and loads out of a CIM index.
 fn read_model(index: &CimIndex) -> InteropResult<EnergySystem> {
-    let nodes: Vec<&XmlElement> = index.of_class("ConnectivityNode").collect();
+    // CIM documents are unordered sets, so every collection is sorted by
+    // identifier; otherwise an import would produce a different system on
+    // every run and generated ids would churn. Connectivity nodes are sorted
+    // *numerically*, so bus 10 follows bus 9 rather than bus 1.
+    let mut nodes: Vec<&XmlElement> = index.of_class("ConnectivityNode").collect();
+    nodes.sort_by_key(|n| cim_node_bus(n).unwrap_or(usize::MAX));
     let model = index.of_class("Model").next();
     let base_mva = model
         .and_then(|m| m.child_num("Model.baseMVA"))
@@ -417,15 +419,16 @@ fn read_model(index: &CimIndex) -> InteropResult<EnergySystem> {
 
 /// Convert a `ConnectivityNode` to a [`Bus`], with its loads and machine flags.
 fn cim_bus_to_core(index: &CimIndex, node: &XmlElement) -> InteropResult<Bus> {
-    let id = node.about().ok_or_else(|| {
-        InteropError::bad_value("cim", "ConnectivityNode", "missing rdf:about identifier")
-    })?;
-    let local = XmlElement::local_id(&id);
-    let bus_id = local.parse::<usize>().map_err(|_| {
+    let bus_id = cim_node_bus(node).ok_or_else(|| {
         InteropError::bad_value(
             "cim",
             "ConnectivityNode rdf:about",
-            format!("node id `{local}` is not an integer bus number"),
+            format!(
+                "node id `{}` is not an integer bus number",
+                node.about()
+                    .as_deref()
+                    .map_or_else(String::new, |id| XmlElement::local_id(id).to_string())
+            ),
         )
     })?;
     let name = node
@@ -453,12 +456,18 @@ fn cim_bus_to_core(index: &CimIndex, node: &XmlElement) -> InteropResult<Bus> {
         BusType::Pq
     };
 
-    Ok(
-        Bus::new(bus_id, name, bus_type)
-            .with_voltage_pu(v, angle_deg * DEG_TO_RAD)
-            .with_base_kv(base_kv)
-            .with_load(load_mw, load_mvar),
-    )
+    Ok(Bus::new(bus_id, name, bus_type)
+        .with_voltage_pu(v, angle_deg * DEG_TO_RAD)
+        .with_base_kv(base_kv)
+        .with_load(load_mw, load_mvar))
+}
+
+/// Bus number of a `ConnectivityNode`, from the fragment of its `rdf:about`.
+fn cim_node_bus(node: &XmlElement) -> Option<usize> {
+    node.about()
+        .as_deref()
+        .map(XmlElement::local_id)
+        .and_then(|id| id.parse::<usize>().ok())
 }
 
 /// Nominal voltage in kV of the voltage level containing a node.
@@ -537,6 +546,11 @@ fn consumer_totals(index: &CimIndex, node: &XmlElement) -> (f64, f64) {
 }
 
 /// Bus ids a piece of equipment is attached to, via its terminals.
+///
+/// The result is sorted ascending, so a two-terminal branch always reports its
+/// lower-numbered end first. CIM stores terminals in an unordered set and the
+/// index is a hash map, so without this the branch direction would flip from
+/// one import to the next.
 fn equipment_buses(index: &CimIndex, equipment: &XmlElement) -> Vec<usize> {
     let Some(id) = equipment.about() else {
         return Vec::new();
@@ -544,17 +558,19 @@ fn equipment_buses(index: &CimIndex, equipment: &XmlElement) -> Vec<usize> {
     let local = XmlElement::local_id(&id);
     let mut buses = Vec::new();
     for terminal in index.of_class("Terminal") {
-        if terminal.child_ref("Terminal.ConductingEquipment")
+        if terminal
+            .child_ref("Terminal.ConductingEquipment")
             .is_some_and(|r| XmlElement::local_id(&r) == local)
         {
             if let Some(node) = terminal.child_ref("Terminal.ConnectivityNode") {
                 let node_local = XmlElement::local_id(&node);
-                if let Some(v) = equipment_buses_from_id(index, node_local) {
-                    buses.push(v);
+                if let Some(bus) = equipment_buses_from_id(index, node_local) {
+                    buses.push(bus);
                 }
             }
         }
     }
+    buses.sort_unstable();
     buses
 }
 
@@ -562,7 +578,10 @@ fn equipment_buses(index: &CimIndex, equipment: &XmlElement) -> Vec<usize> {
 fn equipment_buses_from_id(index: &CimIndex, node_local: &str) -> Option<usize> {
     index
         .of_class("ConnectivityNode")
-        .find(|n| n.about().is_some_and(|a| XmlElement::local_id(&a) == node_local))
+        .find(|n| {
+            n.about()
+                .is_some_and(|a| XmlElement::local_id(&a) == node_local)
+        })
         .and_then(|n| {
             n.about()
                 .and_then(|a| XmlElement::local_id(&a).parse::<usize>().ok())
@@ -615,7 +634,16 @@ where
     I: Iterator<Item = &'a XmlElement>,
 {
     let mut out: Vec<&XmlElement> = items.collect();
-    out.sort_by_key(|e| e.about().as_deref().map_or_else(String::new, ToString::to_string));
+    // IDs carry a numeric suffix (`urn:tpt-energy:<class>:<n>`) allocated from
+    // a single counter shared across every element type, so a plain string
+    // sort would put "10" before "9"; sorting on the parsed number instead
+    // keeps elements in allocation (i.e. original) order.
+    out.sort_by_key(|e| {
+        let about = e.about().unwrap_or_default();
+        let local = XmlElement::local_id(&about);
+        let numeric_suffix = local.rsplit(':').next().and_then(|s| s.parse::<u64>().ok());
+        (numeric_suffix, about)
+    });
     out
 }
 
@@ -674,31 +702,19 @@ fn add_cim_machines(index: &CimIndex, sys: &mut EnergySystem) -> InteropResult<(
             .child_num_any(&["RotatingMachine.q", "EquivalentInjection.q"])
             .unwrap_or(0.0);
         let p_max = machine
-            .child_num_any(&[
-                "RotatingMachine.maxOperatingP",
-                "EquivalentInjection.maxP",
-            ])
+            .child_num_any(&["RotatingMachine.maxOperatingP", "EquivalentInjection.maxP"])
             .unwrap_or_else(|| p.abs().max(1.0));
         let p_min = machine
-            .child_num_any(&[
-                "RotatingMachine.minOperatingP",
-                "EquivalentInjection.minP",
-            ])
+            .child_num_any(&["RotatingMachine.minOperatingP", "EquivalentInjection.minP"])
             .unwrap_or(0.0);
         let name = machine
             .child_text("IdentifiedObject.name")
             .filter(|n| !n.is_empty())
             .unwrap_or_else(|| format!("G{}", i + 1));
-        let mut gen = Generator::new(
-            i + 1,
-            name.clone(),
-            cim_generator_type(&name),
-            p_max,
-            p_min,
-        )
-        .at_bus(bus_id)
-        .with_p_schedule(p)
-        .with_reactive_limits(-q.abs(), q.abs());
+        let mut gen = Generator::new(i + 1, name.clone(), cim_generator_type(&name), p_max, p_min)
+            .at_bus(bus_id)
+            .with_p_schedule(p)
+            .with_reactive_limits(-q.abs(), q.abs());
         if let Some(v) = machine.child_num("RotatingMachine.regulatedControl.targetValue") {
             gen = gen.with_voltage_setpoint(v);
         }
@@ -796,18 +812,32 @@ pub fn to_cim(system: &EnergySystem) -> InteropResult<String> {
     }
     let _ = writeln!(out, ">");
     let _ = writeln!(out, "  <cim:Model rdf:about=\"urn:tpt-energy:Model\">");
-    let _ = writeln!(out, "    <cim:Model.baseMVA>{}</cim:Model.baseMVA>", system.base_mva);
-    let _ = writeln!(out, "    <cim:Model.frequency>{}</cim:Model.frequency>", system.frequency_hz);
+    let _ = writeln!(
+        out,
+        "    <cim:Model.baseMVA>{}</cim:Model.baseMVA>",
+        system.base_mva
+    );
+    let _ = writeln!(
+        out,
+        "    <cim:Model.frequency>{}</cim:Model.frequency>",
+        system.frequency_hz
+    );
     let _ = writeln!(out, "  </cim:Model>");
 
     for kv in distinct_base_kv(system) {
         let kv_id = format!("urn:tpt-energy:BaseVoltage:{kv}");
         let vl_id = format!("urn:tpt-energy:VoltageLevel:{kv}");
         let _ = writeln!(out, "  <cim:BaseVoltage rdf:about=\"{kv_id}\">");
-        let _ = writeln!(out, "    <cim:BaseVoltage.nominalVoltage>{kv}</cim:BaseVoltage.nominalVoltage>");
+        let _ = writeln!(
+            out,
+            "    <cim:BaseVoltage.nominalVoltage>{kv}</cim:BaseVoltage.nominalVoltage>"
+        );
         let _ = writeln!(out, "  </cim:BaseVoltage>");
         let _ = writeln!(out, "  <cim:VoltageLevel rdf:about=\"{vl_id}\">");
-        let _ = writeln!(out, "    <cim:VoltageLevel.BaseVoltage rdf:resource=\"{kv_id}\"/>");
+        let _ = writeln!(
+            out,
+            "    <cim:VoltageLevel.BaseVoltage rdf:resource=\"{kv_id}\"/>"
+        );
         let _ = writeln!(out, "  </cim:VoltageLevel>");
     }
 
@@ -821,10 +851,26 @@ pub fn to_cim(system: &EnergySystem) -> InteropResult<String> {
     for l in &system.loads {
         let id = ids.next_id("EnergyConsumer");
         let term = ids.next_id("Terminal");
-        write_object_header(&mut out, "EnergyConsumer", &id, &format!("Load at bus {}", l.bus_id));
-        let _ = writeln!(out, "    <cim:EnergyConsumer.p>{}</cim:EnergyConsumer.p>", l.p_mw);
-        let _ = writeln!(out, "    <cim:EnergyConsumer.q>{}</cim:EnergyConsumer.q>", l.q_mvar);
-        let _ = writeln!(out, "    <cim:EnergyConsumer.Terminals rdf:resource=\"{term}\"/>");
+        write_object_header(
+            &mut out,
+            "EnergyConsumer",
+            &id,
+            &format!("Load at bus {}", l.bus_id),
+        );
+        let _ = writeln!(
+            out,
+            "    <cim:EnergyConsumer.p>{}</cim:EnergyConsumer.p>",
+            l.p_mw
+        );
+        let _ = writeln!(
+            out,
+            "    <cim:EnergyConsumer.q>{}</cim:EnergyConsumer.q>",
+            l.q_mvar
+        );
+        let _ = writeln!(
+            out,
+            "    <cim:EnergyConsumer.Terminals rdf:resource=\"{term}\"/>"
+        );
         let _ = writeln!(out, "  </cim:EnergyConsumer>");
         write_terminal(&mut out, &term, &id, l.bus_id, "EnergyConsumer");
     }
@@ -879,7 +925,11 @@ fn write_object_header(out: &mut String, class: &str, id: &str, name: &str) {
 fn write_terminal(out: &mut String, term_id: &str, equipment_id: &str, bus: usize, class: &str) {
     let _ = writeln!(out, "  <cim:Terminal rdf:about=\"{term_id}\">");
     let _ = writeln!(out, "    <cim:Terminal.ConductingEquipment rdf:resource=\"{equipment_id}\" rdf:about=\"{class}\"/>");
-    let _ = writeln!(out, "    <cim:Terminal.ConnectivityNode rdf:resource=\"{}\"/>", node_id(bus));
+    let _ = writeln!(
+        out,
+        "    <cim:Terminal.ConnectivityNode rdf:resource=\"{}\"/>",
+        node_id(bus)
+    );
     let _ = writeln!(out, "  </cim:Terminal>");
 }
 
@@ -890,7 +940,10 @@ fn write_cim_bus(out: &mut String, ids: &mut Ids, system: &EnergySystem, bus: &B
     let bb_id = ids.next_id("BusbarSection");
     let bb_term = ids.next_id("Terminal");
     write_object_header(out, "BusbarSection", &bb_id, &bus.name);
-    let _ = writeln!(out, "    <cim:BusbarSection.Terminals rdf:resource=\"{bb_term}\"/>");
+    let _ = writeln!(
+        out,
+        "    <cim:BusbarSection.Terminals rdf:resource=\"{bb_term}\"/>"
+    );
     let _ = writeln!(out, "  </cim:BusbarSection>");
     write_terminal(out, &bb_term, &bb_id, bus.id, "BusbarSection");
     terminals.push(bb_term);
@@ -925,16 +978,36 @@ fn write_cim_bus(out: &mut String, ids: &mut Ids, system: &EnergySystem, bus: &B
     if bus.load_mw != 0.0 || bus.load_mvar != 0.0 {
         let term = ids.next_id("Terminal");
         let id = ids.next_id("EnergyConsumer");
-        write_object_header(out, "EnergyConsumer", &id, &format!("Load at bus {}", bus.id));
-        let _ = writeln!(out, "    <cim:EnergyConsumer.p>{}</cim:EnergyConsumer.p>", bus.load_mw);
-        let _ = writeln!(out, "    <cim:EnergyConsumer.q>{}</cim:EnergyConsumer.q>", bus.load_mvar);
-        let _ = writeln!(out, "    <cim:EnergyConsumer.Terminals rdf:resource=\"{term}\"/>");
+        write_object_header(
+            out,
+            "EnergyConsumer",
+            &id,
+            &format!("Load at bus {}", bus.id),
+        );
+        let _ = writeln!(
+            out,
+            "    <cim:EnergyConsumer.p>{}</cim:EnergyConsumer.p>",
+            bus.load_mw
+        );
+        let _ = writeln!(
+            out,
+            "    <cim:EnergyConsumer.q>{}</cim:EnergyConsumer.q>",
+            bus.load_mvar
+        );
+        let _ = writeln!(
+            out,
+            "    <cim:EnergyConsumer.Terminals rdf:resource=\"{term}\"/>"
+        );
         let _ = writeln!(out, "  </cim:EnergyConsumer>");
         write_terminal(out, &term, &id, bus.id, "EnergyConsumer");
         terminals.push(term);
     }
 
-    let _ = writeln!(out, "  <cim:ConnectivityNode rdf:about=\"{}\">", node_id(bus.id));
+    let _ = writeln!(
+        out,
+        "  <cim:ConnectivityNode rdf:about=\"{}\">",
+        node_id(bus.id)
+    );
     let _ = writeln!(
         out,
         "    <cim:IdentifiedObject.name>{}</cim:IdentifiedObject.name>",
@@ -946,41 +1019,76 @@ fn write_cim_bus(out: &mut String, ids: &mut Ids, system: &EnergySystem, bus: &B
         bus.base_kv
     );
     for term in &terminals {
-        let _ = writeln!(out, "    <cim:ConnectivityNode.Terminals rdf:resource=\"{term}\"/>");
+        let _ = writeln!(
+            out,
+            "    <cim:ConnectivityNode.Terminals rdf:resource=\"{term}\"/>"
+        );
     }
     let _ = writeln!(out, "  </cim:ConnectivityNode>");
 }
 
 /// Emit a machine as a `RotatingMachine`, or an `EquivalentInjection` at the
 /// slack bus (which is what the importer reads back as a slack bus).
-fn write_cim_machine(
-    out: &mut String,
-    id: &str,
-    term: &str,
-    g: &Generator,
-    is_slack: bool,
-) {
+fn write_cim_machine(out: &mut String, id: &str, term: &str, g: &Generator, is_slack: bool) {
     if is_slack {
         write_object_header(out, "EquivalentInjection", id, g.name.as_str());
-        let _ = writeln!(out, "    <cim:EquivalentInjection.p>{}</cim:EquivalentInjection.p>", g.p_schedule_mw);
-        let _ = writeln!(out, "    <cim:EquivalentInjection.q>{}</cim:EquivalentInjection.q>", g.q_min_mvar);
-        let _ = writeln!(out, "    <cim:EquivalentInjection.maxP>{}</cim:EquivalentInjection.maxP>", g.p_max_mw);
-        let _ = writeln!(out, "    <cim:EquivalentInjection.minP>{}</cim:EquivalentInjection.minP>", g.p_min_mw);
-        let _ = writeln!(out, "    <cim:EquivalentInjection.Terminals rdf:resource=\"{term}\"/>");
+        let _ = writeln!(
+            out,
+            "    <cim:EquivalentInjection.p>{}</cim:EquivalentInjection.p>",
+            g.p_schedule_mw
+        );
+        let _ = writeln!(
+            out,
+            "    <cim:EquivalentInjection.q>{}</cim:EquivalentInjection.q>",
+            g.q_min_mvar
+        );
+        let _ = writeln!(
+            out,
+            "    <cim:EquivalentInjection.maxP>{}</cim:EquivalentInjection.maxP>",
+            g.p_max_mw
+        );
+        let _ = writeln!(
+            out,
+            "    <cim:EquivalentInjection.minP>{}</cim:EquivalentInjection.minP>",
+            g.p_min_mw
+        );
+        let _ = writeln!(
+            out,
+            "    <cim:EquivalentInjection.Terminals rdf:resource=\"{term}\"/>"
+        );
         let _ = writeln!(out, "  </cim:EquivalentInjection>");
         write_terminal(out, term, id, g.bus_id, "EquivalentInjection");
     } else {
         write_object_header(out, "RotatingMachine", id, g.name.as_str());
-        let _ = writeln!(out, "    <cim:RotatingMachine.p>{}</cim:RotatingMachine.p>", g.p_schedule_mw);
-        let _ = writeln!(out, "    <cim:RotatingMachine.q>{}</cim:RotatingMachine.q>", g.q_min_mvar);
-        let _ = writeln!(out, "    <cim:RotatingMachine.maxOperatingP>{}</cim:RotatingMachine.maxOperatingP>", g.p_max_mw);
-        let _ = writeln!(out, "    <cim:RotatingMachine.minOperatingP>{}</cim:RotatingMachine.minOperatingP>", g.p_min_mw);
+        let _ = writeln!(
+            out,
+            "    <cim:RotatingMachine.p>{}</cim:RotatingMachine.p>",
+            g.p_schedule_mw
+        );
+        let _ = writeln!(
+            out,
+            "    <cim:RotatingMachine.q>{}</cim:RotatingMachine.q>",
+            g.q_min_mvar
+        );
+        let _ = writeln!(
+            out,
+            "    <cim:RotatingMachine.maxOperatingP>{}</cim:RotatingMachine.maxOperatingP>",
+            g.p_max_mw
+        );
+        let _ = writeln!(
+            out,
+            "    <cim:RotatingMachine.minOperatingP>{}</cim:RotatingMachine.minOperatingP>",
+            g.p_min_mw
+        );
         let _ = writeln!(
             out,
             "    <cim:RotatingMachine.regulatedControl.targetValue>{}</cim:RotatingMachine.regulatedControl.targetValue>",
             g.voltage_setpoint_pu
         );
-        let _ = writeln!(out, "    <cim:RotatingMachine.Terminals rdf:resource=\"{term}\"/>");
+        let _ = writeln!(
+            out,
+            "    <cim:RotatingMachine.Terminals rdf:resource=\"{term}\"/>"
+        );
         let _ = writeln!(out, "  </cim:RotatingMachine>");
         write_terminal(out, term, id, g.bus_id, "RotatingMachine");
     }
@@ -991,9 +1099,21 @@ fn write_cim_line(out: &mut String, ids: &mut Ids, system: &EnergySystem, br: &B
     let t1 = ids.next_id("Terminal");
     let t2 = ids.next_id("Terminal");
     write_object_header(out, "ACLineSegment", &id, &br.name);
-    let _ = writeln!(out, "    <cim:ACLineSegment.r>{}</cim:ACLineSegment.r>", br.resistance_pu);
-    let _ = writeln!(out, "    <cim:ACLineSegment.x>{}</cim:ACLineSegment.x>", br.reactance_pu);
-    let _ = writeln!(out, "    <cim:ACLineSegment.b>{}</cim:ACLineSegment.b>", br.susceptance_pu);
+    let _ = writeln!(
+        out,
+        "    <cim:ACLineSegment.r>{}</cim:ACLineSegment.r>",
+        br.resistance_pu
+    );
+    let _ = writeln!(
+        out,
+        "    <cim:ACLineSegment.x>{}</cim:ACLineSegment.x>",
+        br.reactance_pu
+    );
+    let _ = writeln!(
+        out,
+        "    <cim:ACLineSegment.b>{}</cim:ACLineSegment.b>",
+        br.susceptance_pu
+    );
     let _ = writeln!(
         out,
         "    <cim:ACLineSegment.inService>{}</cim:ACLineSegment.inService>",
@@ -1009,9 +1129,18 @@ fn write_cim_line(out: &mut String, ids: &mut Ids, system: &EnergySystem, br: &B
     } else {
         0.0
     };
-    let _ = writeln!(out, "    <cim:ACLineSegment.CurrentLimit>{amps:.4}</cim:ACLineSegment.CurrentLimit>");
-    let _ = writeln!(out, "    <cim:ACLineSegment.Terminals rdf:resource=\"{t1}\"/>");
-    let _ = writeln!(out, "    <cim:ACLineSegment.Terminals rdf:resource=\"{t2}\"/>");
+    let _ = writeln!(
+        out,
+        "    <cim:ACLineSegment.CurrentLimit>{amps:.4}</cim:ACLineSegment.CurrentLimit>"
+    );
+    let _ = writeln!(
+        out,
+        "    <cim:ACLineSegment.Terminals rdf:resource=\"{t1}\"/>"
+    );
+    let _ = writeln!(
+        out,
+        "    <cim:ACLineSegment.Terminals rdf:resource=\"{t2}\"/>"
+    );
     let _ = writeln!(out, "  </cim:ACLineSegment>");
     write_terminal(out, &t1, &id, br.from_bus, "ACLineSegment");
     write_terminal(out, &t2, &id, br.to_bus, "ACLineSegment");

@@ -28,9 +28,7 @@
 
 use std::path::Path;
 
-use tpt_nrg_core::{
-    Branch, Bus, BusType, EnergySystem, Generator, GeneratorType, Load, Storage,
-};
+use tpt_nrg_core::{Branch, Bus, BusType, EnergySystem, Generator, GeneratorType, Load, Storage};
 
 use crate::error::{field_index, InteropError, InteropResult};
 
@@ -41,8 +39,8 @@ use crate::error::{field_index, InteropError, InteropResult};
 /// Returns [`InteropError::Parse`] if the document is not valid YAML and
 /// [`InteropError::InvalidSystem`] if the result fails structural validation.
 pub fn from_yaml(text: &str) -> InteropResult<EnergySystem> {
-    let system: EnergySystem = serde_norway::from_str(text)
-        .map_err(|e| InteropError::parse("yaml", e.to_string()))?;
+    let system: EnergySystem =
+        serde_norway::from_str(text).map_err(|e| InteropError::parse("yaml", e.to_string()))?;
     system.validate().map_err(InteropError::InvalidSystem)?;
     Ok(system)
 }
@@ -74,7 +72,12 @@ pub fn from_csv_dir(dir: impl AsRef<Path>) -> InteropResult<EnergySystem> {
         return Err(InteropError::missing("csv", "buses.csv"));
     }
     let header = optional_header(dir, "system.csv");
-    let mut sys = EnergySystem::new(&header.id, &header.name, header.base_mva, header.frequency_hz);
+    let mut sys = EnergySystem::new(
+        &header.id,
+        &header.name,
+        header.base_mva,
+        header.frequency_hz,
+    );
     add_csv_buses(&mut sys, &read_table(&buses_path)?)?;
     add_csv_branches(&mut sys, &read_optional(dir, "branches.csv")?)?;
     add_csv_generators(&mut sys, &read_optional(dir, "generators.csv")?)?;
@@ -123,10 +126,7 @@ fn add_csv_branches(sys: &mut EnergySystem, rows: &[csv::StringRecord]) -> Inter
 /// # Errors
 ///
 /// Propagates any row conversion failure.
-fn add_csv_generators(
-    sys: &mut EnergySystem,
-    rows: &[csv::StringRecord],
-) -> InteropResult<()> {
+fn add_csv_generators(sys: &mut EnergySystem, rows: &[csv::StringRecord]) -> InteropResult<()> {
     let Some((header, data)) = rows.split_first() else {
         return Ok(());
     };
@@ -165,8 +165,7 @@ fn add_csv_storage(sys: &mut EnergySystem, rows: &[csv::StringRecord]) -> Intero
     };
     for row in data {
         let unit = storage_from_row(&Row::new(header, row))?;
-        sys.add_storage(unit)
-            .map_err(InteropError::InvalidSystem)?;
+        sys.add_storage(unit).map_err(InteropError::InvalidSystem)?;
     }
     Ok(())
 }
@@ -176,7 +175,7 @@ fn add_csv_storage(sys: &mut EnergySystem, rows: &[csv::StringRecord]) -> Intero
 /// The `record` column selects the record type of each row; every other
 /// column is matched by header name using the same names as the JSON schema.
 /// A row with `record = system` supplies the top-level id, name, base MVA,
-/// and frequency; if absent, the defaults in [`SystemHeader`] are used.
+/// and frequency; if absent, default values are used.
 ///
 /// # Errors
 ///
@@ -189,7 +188,10 @@ pub fn from_flat_csv(text: &str) -> InteropResult<EnergySystem> {
     let (header, data) = rows
         .split_first()
         .ok_or_else(|| InteropError::missing("csv", "header row"))?;
-    if !header.iter().any(|h| h.trim().eq_ignore_ascii_case("record")) {
+    if !header
+        .iter()
+        .any(|h| h.trim().eq_ignore_ascii_case("record"))
+    {
         return Err(InteropError::missing("csv", "a `record` column"));
     }
 
@@ -197,10 +199,7 @@ pub fn from_flat_csv(text: &str) -> InteropResult<EnergySystem> {
     let mut sys = EnergySystem::new(&top.id, &top.name, top.base_mva, top.frequency_hz);
     for row in data {
         let row = Row::new(header, row);
-        let kind = row
-            .raw("record")
-            .unwrap_or_default()
-            .to_ascii_lowercase();
+        let kind = row.raw("record").unwrap_or_default().to_ascii_lowercase();
         match kind.as_str() {
             "system" => {
                 top = system_header(&row);
@@ -226,8 +225,7 @@ pub fn from_flat_csv(text: &str) -> InteropResult<EnergySystem> {
             }
             "storage" => {
                 let unit = storage_from_row(&row)?;
-                sys.add_storage(unit)
-                    .map_err(InteropError::InvalidSystem)?;
+                sys.add_storage(unit).map_err(InteropError::InvalidSystem)?;
             }
             other => {
                 return Err(InteropError::bad_value(
@@ -389,17 +387,22 @@ fn system_header(row: &Row<'_>) -> SystemHeader {
 fn optional_header(dir: &Path, name: &str) -> SystemHeader {
     let rows = read_optional(dir, name).unwrap_or_default();
     match rows.split_first() {
-        Some((header, data)) => data
-            .first()
-            .map_or_else(SystemHeader::default, |row| system_header(&Row::new(header, row))),
+        Some((header, data)) => data.first().map_or_else(SystemHeader::default, |row| {
+            system_header(&Row::new(header, row))
+        }),
         None => SystemHeader::default(),
     }
 }
 
 /// Parse a CSV document into records, tolerating a UTF-8 BOM.
+///
+/// Header handling is done by this crate rather than by the `csv` reader, so
+/// `has_headers` is off and the header row is returned as record zero. That
+/// keeps a single code path for the bundled and flat layouts.
 fn parse_table_text(text: &str) -> InteropResult<Vec<csv::StringRecord>> {
     let body = text.strip_prefix('\u{feff}').unwrap_or(text);
     let mut reader = csv::ReaderBuilder::new()
+        .has_headers(false)
         .flexible(true)
         .trim(csv::Trim::All)
         .from_reader(body.as_bytes());
@@ -477,23 +480,21 @@ pub fn branch_from_row(row: &Row<'_>) -> InteropResult<Branch> {
         ));
     }
     let name = row.text_or("name", &format!("{from_bus}-{to_bus}"));
-    Ok(
-        Branch::new(
-            row.id_or_one(),
-            name,
-            from_bus,
-            to_bus,
-            row.num_or_zero("resistance_pu"),
-            row.num_or_zero("reactance_pu"),
-        )
-        .with_susceptance(row.num_or_zero("susceptance_pu"))
-        .with_tap(
-            row.num("tap_ratio").unwrap_or(1.0),
-            row.num_or_zero("phase_shift_rad"),
-        )
-        .with_rating(row.num("rating_mva").unwrap_or(100.0))
-        .with_in_service(row.flag("in_service")),
+    Ok(Branch::new(
+        row.id_or_one(),
+        name,
+        from_bus,
+        to_bus,
+        row.num_or_zero("resistance_pu"),
+        row.num_or_zero("reactance_pu"),
     )
+    .with_susceptance(row.num_or_zero("susceptance_pu"))
+    .with_tap(
+        row.num("tap_ratio").unwrap_or(1.0),
+        row.num_or_zero("phase_shift_rad"),
+    )
+    .with_rating(row.num("rating_mva").unwrap_or(100.0))
+    .with_in_service(row.flag("in_service")))
 }
 
 /// Build a [`Generator`] from a CSV row.
@@ -633,7 +634,25 @@ pub fn to_flat_csv(system: &EnergySystem) -> InteropResult<String> {
     let mut writer = csv::WriterBuilder::new()
         .flexible(true)
         .from_writer(Vec::new());
-    writer.write_record(FLAT_CSV_HEADER).map_err(|e| csv_error(&e))?;
+    writer
+        .write_record(FLAT_CSV_HEADER)
+        .map_err(|e| csv_error(&e))?;
+    write_flat_buses(&mut writer, system)?;
+    write_flat_branches(&mut writer, system)?;
+    write_flat_generators(&mut writer, system)?;
+    write_flat_loads(&mut writer, system)?;
+    write_flat_storage(&mut writer, system)?;
+    let bytes = writer
+        .into_inner()
+        .map_err(|e| InteropError::parse("csv", e.to_string()))?;
+    String::from_utf8(bytes).map_err(|e| InteropError::parse("csv", e.to_string()))
+}
+
+/// Write the bus rows of a flat CSV table.
+fn write_flat_buses<W: std::io::Write>(
+    writer: &mut csv::Writer<W>,
+    system: &EnergySystem,
+) -> InteropResult<()> {
     for b in &system.buses {
         writer
             .write_record([
@@ -667,9 +686,18 @@ pub fn to_flat_csv(system: &EnergySystem) -> InteropResult<String> {
                 "",
                 "",
                 "",
+                "",
             ])
             .map_err(|e| csv_error(&e))?;
     }
+    Ok(())
+}
+
+/// Write the branch rows of a flat CSV table.
+fn write_flat_branches<W: std::io::Write>(
+    writer: &mut csv::Writer<W>,
+    system: &EnergySystem,
+) -> InteropResult<()> {
     for br in &system.branches {
         writer
             .write_record([
@@ -705,6 +733,14 @@ pub fn to_flat_csv(system: &EnergySystem) -> InteropResult<String> {
             ])
             .map_err(|e| csv_error(&e))?;
     }
+    Ok(())
+}
+
+/// Write the generator rows of a flat CSV table.
+fn write_flat_generators<W: std::io::Write>(
+    writer: &mut csv::Writer<W>,
+    system: &EnergySystem,
+) -> InteropResult<()> {
     for g in &system.generators {
         writer
             .write_record([
@@ -739,6 +775,14 @@ pub fn to_flat_csv(system: &EnergySystem) -> InteropResult<String> {
             ])
             .map_err(|e| csv_error(&e))?;
     }
+    Ok(())
+}
+
+/// Write the load rows of a flat CSV table.
+fn write_flat_loads<W: std::io::Write>(
+    writer: &mut csv::Writer<W>,
+    system: &EnergySystem,
+) -> InteropResult<()> {
     for l in &system.loads {
         writer
             .write_record([
@@ -759,6 +803,14 @@ pub fn to_flat_csv(system: &EnergySystem) -> InteropResult<String> {
             ])
             .map_err(|e| csv_error(&e))?;
     }
+    Ok(())
+}
+
+/// Write the storage rows of a flat CSV table.
+fn write_flat_storage<W: std::io::Write>(
+    writer: &mut csv::Writer<W>,
+    system: &EnergySystem,
+) -> InteropResult<()> {
     for s in &system.storage {
         writer
             .write_record([
@@ -793,10 +845,7 @@ pub fn to_flat_csv(system: &EnergySystem) -> InteropResult<String> {
             ])
             .map_err(|e| csv_error(&e))?;
     }
-    let bytes = writer
-        .into_inner()
-        .map_err(|e| InteropError::parse("csv", e.to_string()))?;
-    String::from_utf8(bytes).map_err(|e| InteropError::parse("csv", e.to_string()))
+    Ok(())
 }
 
 /// Format a float for a CSV cell.

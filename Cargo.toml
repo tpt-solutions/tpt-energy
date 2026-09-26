@@ -28,6 +28,7 @@ members = [
     "crates/interop/tpt-nrg-interop",
     "crates/interop/tpt-nrg-viz",
     "crates/cli/tpt-nrg-cli",
+    "crates/bindings/tpt-nrg-python",
 ]
 
 [workspace.package]
@@ -74,6 +75,7 @@ tpt-nrg-carbon = { path = "crates/economics/tpt-nrg-carbon", version = "0.1.0" }
 
 tpt-nrg-interop = { path = "crates/interop/tpt-nrg-interop", version = "0.1.0" }
 tpt-nrg-viz = { path = "crates/interop/tpt-nrg-viz", version = "0.1.0" }
+tpt-nrg-python = { path = "crates/bindings/tpt-nrg-python", version = "0.1.0" }
 
 # External substrate crates (TPT ecosystem)
 #

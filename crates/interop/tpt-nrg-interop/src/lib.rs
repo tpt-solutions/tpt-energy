@@ -31,8 +31,8 @@
 
 #![deny(missing_docs)]
 
-mod error;
 pub mod cim;
+mod error;
 pub mod matpower;
 pub mod psse;
 pub mod tabular;
@@ -106,7 +106,9 @@ impl std::fmt::Display for Format {
 /// [`InteropError::InvalidSystem`] if the result fails structural validation.
 pub fn from_text(text: &str, format: Format) -> InteropResult<EnergySystem> {
     match format {
-        Format::Json => tpt_nrg_core::EnergySystem::from_json(text).map_err(InteropError::InvalidSystem),
+        Format::Json => {
+            tpt_nrg_core::EnergySystem::from_json(text).map_err(InteropError::InvalidSystem)
+        }
         Format::Yaml => tabular::from_yaml(text),
         Format::Csv => tabular::from_flat_csv(text),
         Format::Matpower => matpower::from_matpower(text),
@@ -123,7 +125,9 @@ pub fn from_text(text: &str, format: Format) -> InteropResult<EnergySystem> {
 /// `format`.
 pub fn to_text(system: &EnergySystem, format: Format) -> InteropResult<String> {
     match format {
-        Format::Json => system.to_json_pretty().map_err(|e| InteropError::parse("json", e.to_string())),
+        Format::Json => system
+            .to_json_pretty()
+            .map_err(|e| InteropError::parse("json", e.to_string())),
         Format::Yaml => tabular::to_yaml(system),
         Format::Csv => tabular::to_flat_csv(system),
         Format::Matpower => matpower::to_matpower(system),
