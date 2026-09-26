@@ -5,6 +5,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0](https://github.com/tpt-solutions/tpt-energy/releases/tag/v0.1.0) - 2026-09-26
+
+### Other
+
+- Add per-crate docs, move benches into crates, and update golden test data
+- Add .gitattributes for LF normalization and CI health audit notes
+- Fix correctness bugs across power flow, dispatch, and resource crates
+- Add IEEE-style golden tests across dispatch, fault, resource, and storage crates
+- Add substrate modules, IEEE golden tests, and example tooling
+- Update gitignore and add benches, examples, RFCS, and docs
+- Scaffold Rust workspace with tpt-nrg crates and project tooling
+
 ### Added
 - `BatteryStorage` with SoC tracking, power/energy ratings, and round-trip efficiency split across the charge/discharge legs.
 - `charge()` / `discharge()` with typed `BatteryError` results instead of silent clamping.

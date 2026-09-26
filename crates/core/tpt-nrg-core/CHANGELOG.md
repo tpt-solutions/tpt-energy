@@ -5,6 +5,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0](https://github.com/tpt-solutions/tpt-energy/releases/tag/v0.1.0) - 2026-09-26
+
+### Other
+
+- Add per-crate docs, move benches into crates, and update golden test data
+- Add .gitattributes for LF normalization and CI health audit notes
+- Scaffold Rust workspace with tpt-nrg crates and project tooling
+
 ### Added
 - `EnergySystem` container with buses, branches, generators, loads, storage, and metadata.
 - `Bus` with `BusType` (`Slack` / `PV` / `PQ` / `Isolated`), `Branch` with tap and phase-shift modeling, `Generator` with `P`/`Q` limits and optional cost / heat-rate / power curves.

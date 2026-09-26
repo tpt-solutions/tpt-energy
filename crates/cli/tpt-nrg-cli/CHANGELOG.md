@@ -5,6 +5,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0](https://github.com/tpt-solutions/tpt-energy/releases/tag/v0.1.0) - 2026-09-26
+
+### Other
+
+- Add project template, playground, npm packaging, and release automation
+- Add per-crate docs, CI/release workflow updates, and new examples
+- Add Python bindings, CLI powerflow/dispatch/fault/viz commands, and interop visualization support
+- Add CLI and interop crates, MATPOWER/PSS/E/CIM support, and topology fix
+
 ### Added
 - `tpt-nrg run`: Newton-Raphson, Gauss-Seidel, fast-decoupled, and DC power
   flow, with `table` and `json` output and configurable tolerance and

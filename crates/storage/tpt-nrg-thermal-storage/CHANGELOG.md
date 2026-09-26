@@ -5,6 +5,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0](https://github.com/tpt-solutions/tpt-energy/releases/tag/v0.1.0) - 2026-09-26
+
+### Other
+
+- Add per-crate docs, move benches into crates, and update golden test data
+- Add .gitattributes for LF normalization and CI health audit notes
+- Fix correctness bugs across power flow, dispatch, and resource crates
+- Update gitignore and add benches, examples, RFCS, and docs
+- Scaffold Rust workspace with tpt-nrg crates and project tooling
+
 ### Added
 - `ThermalStorage` charge/discharge model with SoC bounds and round-trip efficiency.
 - This crate-level `README.md` with crates.io `categories` and `keywords` metadata.

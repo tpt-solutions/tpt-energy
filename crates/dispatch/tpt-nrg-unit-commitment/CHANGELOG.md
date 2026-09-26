@@ -5,6 +5,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0](https://github.com/tpt-solutions/tpt-energy/releases/tag/v0.1.0) - 2026-09-26
+
+### Other
+
+- Add project template, playground, npm packaging, and release automation
+- Add per-crate docs, move benches into crates, and update golden test data
+- Add .gitattributes for LF normalization and CI health audit notes
+- Add IEEE-style golden tests across dispatch, fault, resource, and storage crates
+- Add substrate modules, IEEE golden tests, and example tooling
+- Update gitignore and add benches, examples, RFCS, and docs
+- Scaffold Rust workspace with tpt-nrg crates and project tooling
+
 ### Added
 - Priority-list / forward-dispatch heuristic with per-unit merit ordering.
 - `unit_commitment()` returning the commitment matrix, outputs, and horizon cost.

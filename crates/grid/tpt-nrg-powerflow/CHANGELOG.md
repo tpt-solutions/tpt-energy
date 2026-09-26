@@ -5,6 +5,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0](https://github.com/tpt-solutions/tpt-energy/releases/tag/v0.1.0) - 2026-09-26
+
+### Other
+
+- Add project template, playground, npm packaging, and release automation
+- Add per-crate docs, move benches into crates, and update golden test data
+- Add .gitattributes for LF normalization and CI health audit notes
+- Fix correctness bugs across power flow, dispatch, and resource crates
+- Expand docs, RFCS, WASM bindings, and test fixtures
+- Add substrate modules, IEEE golden tests, and example tooling
+- Update gitignore and add benches, examples, RFCS, and docs
+- Scaffold Rust workspace with tpt-nrg crates and project tooling
+
 ### Added
 - Newton–Raphson AC solver with damped steps, DC warm start, and PV-to-PQ switching at generator reactive-power limits (Dommel–Tinney outer loop).
 - Gauss–Seidel, Fast Decoupled (Stott–Alsac XB), and DC linear solvers behind one `PowerFlowSolver` API.

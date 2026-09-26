@@ -1,4 +1,4 @@
-﻿[package]
+[package]
 name = "tpt-nrg-hydrogen"
 version.workspace = true
 edition.workspace = true

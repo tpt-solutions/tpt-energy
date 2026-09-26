@@ -5,6 +5,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0](https://github.com/tpt-solutions/tpt-energy/releases/tag/v0.1.0) - 2026-09-26
+
+### Other
+
+- Add per-crate docs, move benches into crates, and update golden test data
+- Add .gitattributes for LF normalization and CI health audit notes
+- Update gitignore and add benches, examples, RFCS, and docs
+- Scaffold Rust workspace with tpt-nrg crates and project tooling
+
 ### Added
 - `levelized_cost_of_energy()` discounted LCOE with capital-recovery factor and zero-rate limit.
 - `net_present_value()` and bisection-based `internal_rate_of_return()`.
