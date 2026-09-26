@@ -114,7 +114,7 @@ def main() -> int:
     try:
         econ.economic_dispatch(10_000.0)
     except tpt_nrg.EnergyError as exc:
-        check("infeasible kind", getattr(exc, "kind", None) == "infeasible", repr(exc))
+        check("infeasible kind", tpt_nrg.error_kind(exc) == "infeasible", repr(exc))
     else:
         check("infeasible raised", False, "no exception")
 
@@ -132,7 +132,7 @@ def main() -> int:
     try:
         tpt_nrg.System.from_json("{}")
     except tpt_nrg.EnergyError as exc:
-        check("error kind attribute", getattr(exc, "kind", None) == "validation", repr(exc))
+        check("error kind", tpt_nrg.error_kind(exc) == "json", repr(exc))
     else:
         check("error raised", False, "no exception")
 

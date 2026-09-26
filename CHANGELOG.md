@@ -41,8 +41,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   library itself so fixtures cannot drift from the solvers.
 - CI coverage: `examples` build job, `criterion` benches wired into the
   workspace, and a golden-fixture drift guard.
+- `tpt-nrg-interop`: two-way MATPOWER, PSS/E RAW, CIM / IEC 61970 RDF/XML,
+  YAML, and CSV (flat and bundled) conversion of `EnergySystem`, plus a
+  `Format` enum and `from_text`/`to_text` for format-agnostic access.
+- `tpt-nrg-viz`: dependency-free SVG single-line diagram with a bus voltage
+  heatmap, a branch loading heatmap, and a two-row legend.
+- `tpt-nrg-cli`: the `tpt-nrg` binary, with `run` (power flow, economic
+  dispatch, unit commitment, short circuit, LCOE), `convert`, and `viz`
+  subcommands; `table` and `json` output; exit codes 0/1/2.
+- `tpt-nrg-python`: `maturin`-built `tpt_nrg` extension module for Python
+  3.9+, covering power flow, dispatch, commitment, fault, LCOE, carbon,
+  every exchange format, and SVG rendering.
+- `tpt-nrg-wasm`: economic dispatch, unit commitment, LCOE, carbon intensity,
+  and SVG rendering added to the JSON surface; `WasmError` is now a
+  `{ kind, message }` object with a stable `kind` slug on every export.
+- `tpt-nrg-wasm`: `microgrid_step_json` implements real droop control
+  (P/f and Q/V droops, battery headroom limits, dispatchable setpoints, and
+  load shedding) instead of returning no actions.
+- RFC 0006 proposing a unified `ErrorKind` across the workspace.
+- README badges (CI, crates.io, docs.rs, Codecov, license, PyPI, npm) and
+  install instructions for the binary and both bindings.
+- Prebuilt `tpt-nrg` binaries (Linux x86-64/aarch64, macOS aarch64,
+  Windows x86-64) attached to the GitHub release.
+- CI jobs for the CLI, the `wasm32-unknown-unknown` build, and the Python
+  wheel plus its API smoke test.
 
 ### Changed
+- `WasmError` is now a `{ kind, message }` struct rather than a tagged enum,
+  and every `#[wasm_bindgen]` export rejects with that object instead of a
+  stringified `JsValue`, so JavaScript callers can switch on `err.kind`.
+- `ControlAction` gained `kind`, `new_state_of_charge`, and `action` fields,
+  so a caller can tell a hold from a charge and apply the new SoC.
+- `MicrogridAsset` gained an optional `energy_capacity_mwh`; it defaults to
+  one hour of rated power.
+- `microgrid_step_json` takes an optional third `config_json` argument
+  (ignored when absent, so existing callers keep working).
 - `spinning_reserve_margin` now takes headroom only
   (`online_capacity_mw, current_output_mw`); combined adequacy assessment
   moved to `assess_reserves` returning `ReserveAssessment`

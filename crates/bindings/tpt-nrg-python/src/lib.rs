@@ -39,21 +39,47 @@ create_exception!(
     EnergyError,
     PyValueError,
     "An error raised by a TPT Energy operation.\n\n\
-     The `kind` attribute is a stable slug: `validation`, `non_convergence`, \
-     `infeasible`, `unsupported`, or `parse`."
+     The message is `\"<kind>: <detail>\"`, where `kind` is a stable slug; read \
+     it with `tpt_nrg.error_kind(exc)` rather than parsing the text."
 );
 
-/// Convert a TPT Energy error into a Python exception carrying a `kind`.
+/// Every error kind this module can raise, in the order `error_kind` checks.
+const ERROR_KINDS: [&str; 6] = [
+    "validation",
+    "non_convergence",
+    "infeasible",
+    "unsupported",
+    "io",
+    "json",
+];
+
+/// Convert a TPT Energy error into a Python exception.
+///
+/// The kind is carried as a `"<kind>: <detail>"` message prefix rather than an
+/// attribute: `pyo3` normalizes a `PyErr` on its way into Python, which
+/// discards attributes set on the value, and the message always survives. Use
+/// [`error_kind`] to read it back.
 fn fail(kind: &str, message: impl std::fmt::Display) -> PyErr {
-    let text = message.to_string();
-    let err = EnergyError::new_err(format!("{kind}: {text}"));
-    // Attach `kind` and `message` so Python can branch without parsing text.
-    Python::attach(|py| {
-        let value = err.value(py);
-        let _ = value.setattr("kind", kind);
-        let _ = value.setattr("message", &text);
-    });
-    err
+    EnergyError::new_err(format!("{kind}: {message}"))
+}
+
+/// The machine-readable kind of an [`EnergyError`], or `None` for any other
+/// exception.
+///
+/// ```python
+/// try:
+///     system.power_flow()
+/// except tpt_nrg.EnergyError as exc:
+///     if tpt_nrg.error_kind(exc) == "non_convergence":
+///         ...
+/// ```
+#[pyfunction]
+fn error_kind(exc: &Bound<'_, PyAny>) -> Option<String> {
+    let text = exc.str().ok()?.to_string_lossy().into_owned();
+    ERROR_KINDS
+        .iter()
+        .find(|kind| text.starts_with(&format!("{kind}: ")))
+        .map(|kind| (*kind).to_string())
 }
 
 /// Parse a system from text in a named exchange format.
@@ -132,6 +158,7 @@ fn tpt_nrg(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyPowerFlowResult>()?;
     m.add_class::<PySystem>()?;
     m.add_class::<PyLcoeResult>()?;
+    m.add_function(wrap_pyfunction!(error_kind, m)?)?;
     m.add_function(wrap_pyfunction!(formats, m)?)?;
     m.add_function(wrap_pyfunction!(validate, m)?)?;
     Ok(())
@@ -159,21 +186,23 @@ fn validate(text: &str, format: &str) -> PyResult<Option<String>> {
         Ok(_) => Ok(None),
         Err(e) => Python::attach(|py| {
             let value = e.value(py);
-            let kind = value
-                .getattr("kind")
-                .and_then(|k| k.extract::<String>())
-                .unwrap_or_else(|_| "validation".to_string());
+            let kind = error_kind(value).unwrap_or_else(|| "validation".to_string());
             let message = value
-                .getattr("message")
-                .and_then(|m| m.extract::<String>())
-                .unwrap_or_else(|_| e.to_string());
+                .getattr("args")
+                .and_then(|a| a.extract::<(String, String)>())
+                .map_or_else(|_| e.to_string(), |(_, m)| m);
             Ok(Some(format!("{kind}: {message}")))
         }),
     }
 }
 
 /// A solved power flow.
-#[pyclass(get_all, module = "tpt_nrg", skip_from_py_object, name = "PowerFlowResult")]
+#[pyclass(
+    get_all,
+    module = "tpt_nrg",
+    skip_from_py_object,
+    name = "PowerFlowResult"
+)]
 #[derive(Debug, Clone)]
 pub struct PyPowerFlowResult {
     /// Whether the solver converged.

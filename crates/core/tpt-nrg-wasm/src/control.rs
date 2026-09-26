@@ -124,6 +124,9 @@ pub struct ControlDecision {
 
 /// Decide the next setpoint for every asset in `state`.
 ///
+/// This is the typed entry point behind [`microgrid_step_json`](crate::microgrid_step_json);
+/// a native caller can use it directly to avoid a JSON round trip.
+///
 /// # Errors
 ///
 /// Returns [`WasmError`] of kind `control` when the measurements or the tuning

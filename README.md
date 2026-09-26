@@ -4,11 +4,38 @@
 
 **Org:** TPT Solutions · **License:** MIT OR Apache-2.0 · **Repo:** `tpt-energy`
 
+[![CI](https://github.com/tpt-solutions/tpt-energy/actions/workflows/ci.yml/badge.svg)](https://github.com/tpt-solutions/tpt-energy/actions/workflows/ci.yml)
+[![crates.io](https://img.shields.io/crates/v/tpt-nrg-core.svg)](https://crates.io/crates/tpt-nrg-core)
+[![docs.rs](https://img.shields.io/docsrs/tpt-nrg-core.svg)](https://docs.rs/tpt-nrg-core)
+[![Codecov](https://img.shields.io/codecov/c/github/tpt-solutions/tpt-energy.svg)](https://codecov.io/gh/tpt-solutions/tpt-energy)
+[![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE-MIT)
+[![crates.io](https://img.shields.io/crates/v/tpt-nrg-python.svg)](https://pypi.org/project/tpt-nrg/)
+[![npm](https://img.shields.io/npm/v/tpt-nrg.svg)](https://www.npmjs.com/package/tpt-nrg)
+
 TPT Energy is a comprehensive, open-source toolkit for power-systems engineering
 and energy-systems modeling, written in Rust and built on the TPT substrate
 crates (`tpt-math`, `tpt-engineering`, `tpt-science`). It is designed for
 research, planning, dispatch, real-time grid control, and in-browser
 exploration via WebAssembly.
+
+## Install
+
+Rust, from crates.io:
+
+```toml
+[dependencies]
+tpt-nrg-core = "0.1"
+tpt-nrg-powerflow = "0.1"
+```
+
+Prebuilt binaries and bindings:
+
+```sh
+cargo install tpt-nrg-cli      # command-line interface
+pip install tpt-nrg           # Python bindings
+npm install tpt-nrg           # WebAssembly bindings
+```
+
 
 ## Energy Cycle
 
@@ -54,6 +81,10 @@ flowchart LR
 | `tpt-nrg-lcoe`                    | LCOE / NPV / IRR                             | Stable   |
 | `tpt-nrg-market`                  | Market signal modeling                       | Stable   |
 | `tpt-nrg-carbon`                  | Carbon intensity                             | Stable   |
+| `tpt-nrg-interop`                 | MATPOWER / PSS-E / CIM / YAML / CSV I/O      | Alpha    |
+| `tpt-nrg-viz`                     | SVG single-line diagram + heatmap            | Alpha    |
+| `tpt-nrg-cli` (`tpt-nrg` binary)  | Command-line interface                       | Alpha    |
+| `tpt-nrg-python` (`tpt_nrg` module) | Python bindings, built with maturin        | Alpha    |
 
 See [`docs/book/src/crate-status.md`](docs/book/src/crate-status.md) for
 detailed maturity notes per crate.
@@ -87,6 +118,59 @@ let system = EnergySystem::from_json(include_str!("ieee14.json"))?;
 let solver = PowerFlowSolver::new(PowerFlowMethod::NewtonRaphson);
 let result = solver.solve(&system)?;
 println!("{:?}", result);
+# Ok::<(), Box<dyn std::error::Error>>(())
+```
+
+## Command line
+
+```sh
+tpt-nrg run --system test-data/ieee/ieee14.json --method newton-raphson
+tpt-nrg run --system case.json --fault-bus 4
+tpt-nrg run --system case.json --dispatch 100
+tpt-nrg convert --from matpower --to json case14.m -o case14.json
+tpt-nrg viz --system case.json -o diagram.svg
+```
+
+## Python
+
+```python
+import tpt_nrg
+
+system = tpt_nrg.System.from_file("test-data/ieee/ieee14.json")
+result = system.power_flow()
+print(result.converged, result.losses_mw)
+
+try:
+    system.power_flow(max_iterations=1)
+except tpt_nrg.EnergyError as exc:
+    if tpt_nrg.error_kind(exc) == "non_convergence":
+        ...  # loosen the tolerance or fix the case
+```
+
+## Interoperability
+
+`MATPOWER`, `PSS/E`, `CIM` (IEC 61970), `YAML`, `CSV`, and the native `JSON`
+are all two-way via `tpt-nrg-interop`, and reachable from the CLI, the Python
+bindings, and the browser bindings:
+
+```rust
+use tpt_nrg_interop::{from_text, to_text, Format};
+
+let system = from_text(matpower_source, Format::Matpower)?;
+let cim = to_text(&system, Format::Cim)?;
+# Ok::<(), tpt_nrg_interop::InteropError>(())
+```
+
+## Visualization
+
+`tpt-nrg-viz` renders a single-line diagram with a voltage and loading
+heatmap as plain SVG — no asset pipeline, no JavaScript:
+
+```rust
+use tpt_nrg_viz::{render, VizOptions};
+
+let svg = render(&system, Some(&result), &VizOptions::default());
+# Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
 ## Examples

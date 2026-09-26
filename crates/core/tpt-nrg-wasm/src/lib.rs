@@ -20,9 +20,9 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-mod control;
+pub mod control;
 
-pub use control::{ControlConfig, ControlDecision};
+pub use control::{ControlConfig, ControlDecision, Measurements};
 
 /// Machine-readable classification of a WASM boundary failure.
 ///
@@ -503,7 +503,7 @@ pub fn visualize_json(request: &str) -> Result<String, WasmError> {
 /// Run one microgrid control step, returning the decision as JSON.
 ///
 /// `controller_state_json` is a [`MicrogridState`]; `measurements_json` is a
-/// [`control::Measurements`]. The optional `config_json` tunes the droops;
+/// [`Measurements`]. The optional `config_json` tunes the droops;
 /// omitted fields fall back to [`ControlConfig::default`].
 ///
 /// # Errors

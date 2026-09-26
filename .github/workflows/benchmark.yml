@@ -13,9 +13,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - name: Run criterion benches (workspace)
+      - name: Run criterion benches
         shell: bash
-        run: set -o pipefail; cargo bench --workspace --benches -- --output-format bencher 2>&1 | tee benchmark.txt
+        # Only the crates below define criterion `benches/` suites; running
+        # `--workspace` also picks up every other crate's lib unittest binary
+        # in bench mode, which doesn't understand criterion's
+        # `--output-format` flag and fails the job.
+        run: |
+          set -o pipefail
+          cargo bench \
+            -p tpt-nrg-unit-commitment \
+            -p tpt-nrg-powerflow \
+            -p tpt-nrg-solar \
+            --benches -- --output-format bencher 2>&1 | tee benchmark.txt
       - name: Store benchmark result
         uses: benchmark-action/github-action-benchmark@v1
         with:

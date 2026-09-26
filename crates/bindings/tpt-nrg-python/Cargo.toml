@@ -14,7 +14,10 @@ keywords = ["power-systems", "python", "energy", "power-flow", "matpower"]
 publish = false
 
 [lib]
-name = "tpt_nrg"
+# The importable Python module is `tpt_nrg` (see `pyproject.toml`'s
+# `module-name`); the Rust library target keeps the crate name so the two do
+# not collide with the `tpt-nrg` binary's rustdoc output.
+name = "tpt_nrg_python"
 crate-type = ["cdylib", "rlib"]
 
 [lints.rust]

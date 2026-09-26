@@ -20,6 +20,8 @@ tpt-nrg-economic-dispatch = { path = "../crates/dispatch/tpt-nrg-economic-dispat
 tpt-nrg-fault = { path = "../crates/grid/tpt-nrg-fault", version = "0.1.0" }
 tpt-nrg-lcoe = { path = "../crates/economics/tpt-nrg-lcoe", version = "0.1.0" }
 tpt-nrg-carbon = { path = "../crates/economics/tpt-nrg-carbon", version = "0.1.0" }
+tpt-nrg-interop = { path = "../crates/interop/tpt-nrg-interop", version = "0.1.0" }
+tpt-nrg-timeseries = { path = "../crates/core/tpt-nrg-timeseries", version = "0.1.0" }
 chrono = "0.4"
 anyhow = "1.0"
 serde_json = "1.0"
@@ -59,5 +61,13 @@ path = "battery-arbitrage.rs"
 [[bin]]
 name = "energy-cycle"
 path = "energy-cycle.rs"
+
+[[bin]]
+name = "contingency-analysis"
+path = "contingency-analysis.rs"
+
+[[bin]]
+name = "battery-sizing"
+path = "battery-sizing.rs"
 
 

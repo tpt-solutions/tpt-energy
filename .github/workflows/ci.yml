@@ -42,9 +42,65 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - name: Run tests
-        run: cargo test --workspace --all-features
+        # tpt-nrg-python is excluded: pyo3's `extension-module` feature (pulled
+        # in by --all-features) omits the libpython link, which is fine for
+        # the cdylib maturin builds but fails to link a standalone test
+        # binary on macOS. It has its own coverage in the `python` job below.
+        run: cargo test --workspace --all-features --exclude tpt-nrg-python
       - name: Run doc tests
-        run: cargo test --workspace --all-features --doc
+        run: cargo test --workspace --all-features --doc --exclude tpt-nrg-python
+
+  cli:
+    name: tpt-nrg CLI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Smoke-test the subcommands
+        run: |
+          cargo build -p tpt-nrg-cli
+          cargo run -q -p tpt-nrg-cli -- \
+            run --system test-data/ieee/ieee14.json --format json > /dev/null
+          cargo run -q -p tpt-nrg-cli -- \
+            run --system test-data/ieee/ieee14.json --fault-bus 4 > /dev/null
+          cargo run -q -p tpt-nrg-cli -- \
+            convert --from json --to matpower test-data/ieee/ieee14.json -o /tmp/case.m
+          cargo run -q -p tpt-nrg-cli -- \
+            convert --from matpower --to json /tmp/case.m -o /tmp/case.json
+          cargo run -q -p tpt-nrg-cli -- \
+            viz --system test-data/ieee/ieee14.json -o /tmp/case.svg
+          # A bad input must fail with the usage exit code, not succeed.
+          if cargo run -q -p tpt-nrg-cli -- run --system /dev/null; then
+            echo "expected a non-zero exit for an unparseable system"; exit 1
+          fi
+
+  wasm:
+    name: wasm32 build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Build the WebAssembly bindings
+        run: cargo build --target wasm32-unknown-unknown -p tpt-nrg-wasm --features wasm
+
+  python:
+    name: Python bindings
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build and install the wheel
+        run: |
+          pip install maturin
+          maturin build --release --manifest-path crates/bindings/tpt-nrg-python/Cargo.toml --out dist
+          pip install --force-reinstall dist/*.whl
+      - name: Run the API smoke test
+        run: python crates/bindings/tpt-nrg-python/tests/python_api.py
 
   examples:
     name: examples build

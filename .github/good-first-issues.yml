@@ -1,0 +1,82 @@
+# Good first issues
+#
+# Seeded from the Phase 11 backlog so new contributors have a labelled entry
+# point. Each item is scoped to a single crate, has an obvious "done" state,
+# and needs no design decisions.
+#
+# To file one, open an issue titled after the item and add
+# `good first issue` plus the crate label.
+
+- title: "Add `kind()` to every `tpt-nrg-interop` error path"
+  labels: ["good first issue", "interop", "api"]
+  body: |
+    `tpt-nrg-interop` already exposes `InteropError::kind()`; the per-crate
+    error enums in the rest of the workspace do not.
+
+    Add a `kind()` method to `PowerFlowError`, `DispatchError`, `BatteryError`,
+    `TopologyError`, and `TimeSeriesError` that maps each variant onto the
+    closest `InteropErrorKind` slug, plus a unit test per variant.
+
+    Start with RFC 0006: the mapping is already written down there.
+
+    Done when `cargo test --workspace --all-features` passes and each
+    `kind()` is covered by a test.
+
+- title: "Document the PSS/E transformer-winding fields in `tpt-nrg-interop`"
+  labels: ["good first issue", "interop", "docs"]
+  body: |
+    `tpt-nrg-interop::psse` reads the leading, positionally stable fields of a
+    v30/v32/v33 RAW record and ignores transformer-winding sub-blocks, so an
+    imported transformer gets a unity tap.
+
+    Add a section to the `psse` module docs listing the winding sub-block
+    fields this version reads (currently: none) and the fields a future
+    version would need, and cross-reference the dialect table.
+
+    Done when the module docs state the limitation without requiring a
+    reader to read the parser.
+
+- title: "Add a `tpt-nrg-interop` golden test for an out-of-service PSS/E branch"
+  labels: ["good first issue", "interop", "testing"]
+  body: |
+    The MATPOWER round trip has a golden test for an out-of-service branch;
+    PSS/E does not. PSS/E encodes service state in the `ST` field, and
+    `from_psse` reads it, so a regression there would be silent.
+
+    Add a fixture under `test-data/interop/` with a two-branch RAW file where
+    one branch has `ST = 0`, and assert that `from_psse` sets `in_service`
+    accordingly and that a `to_psse` / `from_psse` round trip preserves it.
+
+    Done when the test is in `crates/interop/tpt-nrg-interop/tests/interop.rs`
+    and fails if the `ST` handling is removed.
+
+- title: "Add a `tpt-nrg-viz` golden test for the legend"
+  labels: ["good first issue", "viz", "testing"]
+  body: |
+    `tpt-nrg-viz` renders two legend rows, but only the bus-count assertion is
+    tested.
+
+    Add a golden test that renders a small system, normalizes the SVG
+    (rounding coordinates to one decimal, as the golden generators do
+    elsewhere), and compares against a fixture in
+    `test-data/golden/viz/`.
+
+    Done when the fixture is committed and the test fails on a deliberate
+    layout change.
+
+- title: "Add a CSV export example to the `tpt-nrg` CLI"
+  labels: ["good first issue", "cli", "docs"]
+  body: |
+    `tpt-nrg convert` can write every format, but the flat-CSV output is the
+    least obvious because the rows carry the union of all columns.
+
+    Add a short section to the CLI crate docs showing
+
+    ```sh
+    tpt-nrg convert --from json --to csv case.json -o case.csv
+    head -3 case.csv
+    ```
+
+    and explaining the `record` column.
+
+    Done when the section is in `crates/cli/tpt-nrg-cli/README.md`.

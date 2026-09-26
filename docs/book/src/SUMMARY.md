@@ -41,6 +41,13 @@
 - [`tpt-nrg-unit-commitment` / `tpt-nrg-economic-dispatch` / `tpt-nrg-reserve`](crate-dispatch.md)
 - [`tpt-nrg-lcoe` / `tpt-nrg-market` / `tpt-nrg-carbon`](crate-economics.md)
 
+# Interop & Distribution
+
+- [`tpt-nrg-interop`](crate-interop.md) — MATPOWER, PSS/E, CIM, YAML, and CSV.
+- [`tpt-nrg-viz`](crate-viz.md) — SVG single-line diagram and heatmap.
+- [`tpt-nrg-cli`](crate-cli.md) — the `tpt-nrg` command-line interface.
+- [`tpt-nrg-python`](https://github.com/tpt-solutions/tpt-energy/tree/master/crates/bindings/tpt-nrg-python) — Python bindings.
+
 # Advanced
 
 - [`tpt-nrg-state-estimation` / `tpt-nrg-protection` / `tpt-nrg-wasm`](crate-advanced.md)
